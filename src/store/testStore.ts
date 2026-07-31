@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useHistoryStore } from './historyStore'
 import type { ParsedCurl, ChartPoint, TputPoint, LogEntry, FailureGroup, TestConfig, PatternType, ReportData } from '../lib/types'
 import { getRps, getDurationMs, getConcur, getTimeout } from '../lib/loadPatterns'
 import { fireRequest, makeSemaphore } from '../lib/fetcher'
@@ -224,13 +225,20 @@ export const useTestStore = create<TestState>((set, get) => {
       }
 
       const statusMap = { manual: 'stopped', done: 'done', threshold: 'threshold' } as const
-      set(s => ({
+      const report = buildReport(get())
+      set({
         running: false,
         stopped: true,
         status: statusMap[reason],
         progressPct: 100,
-        report: buildReport(s as TestState),
-      }))
+        report,
+      })
+
+      // save here, not in a component effect — stopTest runs exactly once per
+      // run (guarded above), so remounting the Run page can't duplicate history
+      if (report.meta.total > 0) {
+        useHistoryStore.getState().addRun(report, runPattern)
+      }
     },
   }
 })

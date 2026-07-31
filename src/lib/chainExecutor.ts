@@ -33,10 +33,16 @@ async function getNestedValue(obj: unknown, path: string): Promise<string | null
 export async function runChain(steps: ChainStep[], timeout = 10000): Promise<ChainVars> {
   const vars: ChainVars = {}
 
-  for (const step of steps) {
+  for (const [i, step] of steps.entries()) {
     if (!step.curl.trim()) continue
     let parsed
-    try { parsed = parseCurl(step.curl) } catch { continue }
+    try {
+      parsed = parseCurl(step.curl)
+    } catch (e) {
+      // don't skip silently — an unparsed step means its variables never get
+      // extracted and the real test runs with literal {{chain.*}} placeholders
+      throw new Error(`Chain step ${i + 1}: invalid cURL — ${e instanceof Error ? e.message : String(e)}`)
+    }
 
     const injected = applyVarsWithChain(parsed, vars)
 

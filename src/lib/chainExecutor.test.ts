@@ -41,6 +41,13 @@ describe('runChain', () => {
     expect(vars).toEqual({ t: 'tok' })
   })
 
+  it('rejects on an unparseable chain step instead of silently skipping it (#81)', async () => {
+    mockFetch(() => jsonResponse('{}'))
+    await expect(
+      runChain([step([{ varName: 't', source: 'body', path: 'token' }], 'curl -X POST')]),
+    ).rejects.toThrow(/step 1/i)
+  })
+
   it('extracts from a falsy-but-valid JSON body (#67)', async () => {
     mockFetch(() => jsonResponse('0'))
     const vars = await runChain([step([{ varName: 'n', source: 'body', path: '$' }])])

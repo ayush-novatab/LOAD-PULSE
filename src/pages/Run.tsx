@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useTestStore } from '../store/testStore'
-import { useHistoryStore } from '../store/historyStore'
 import { describeTest } from '../lib/loadPatterns'
 import type { ParsedCurl, PatternType, StepConfig, TestConfig } from '../lib/types'
 
@@ -63,44 +62,20 @@ export default function Run() {
   const [showCriteria, setShowCriteria] = useState(false)
   const [chainSteps, setChainSteps] = useState<ChainStep[]>([])
   const [chainStatus, setChainStatus] = useState<'idle' | 'running' | 'done' | 'error'>('idle')
+  const [chainError, setChainError] = useState('')
   const [chainVars, setChainVars] = useState<Record<string, string>>({})
   const [showChain, setShowChain] = useState(false)
   const [showPostman, setShowPostman] = useState(false)
 
   const { running, status, stats, chartPts, tputPts, logBuf, progressPct, report, thresholdMsg } = useTestStore()
   const { startTest, stopTest, reset } = useTestStore()
-  const { addRun } = useHistoryStore()
 
   const patch = useCallback((p: Partial<FormState>) => setForm(f => ({ ...f, ...p })), [])
 
   const isDone = status === 'done' || status === 'stopped' || status === 'threshold'
   const isActive = running || isDone
 
-  // Auto-save to history once on completion
-  useEffect(() => {
-    if (isDone && report && report.meta.total > 0) {
-      report.meta.pattern = pattern
-      addRun(report, pattern)
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status])
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        if (!running && parsed) handleStart()
-      }
-      if (e.key === 'Escape' && running) {
-        stopTest('manual')
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [running, parsed])
-
-  async function handleStart() {
+  const handleStart = useCallback(async () => {
     if (!parsed) return
     reset()
 
@@ -108,12 +83,14 @@ export default function Run() {
     const stepsToRun = chainSteps.filter(s => s.curl.trim())
     if (stepsToRun.length > 0) {
       setChainStatus('running')
+      setChainError('')
       try {
         vars = await runChain(stepsToRun)
         setChainVars(vars)
         setChainStatus('done')
-      } catch {
+      } catch (e) {
         setChainStatus('error')
+        setChainError(e instanceof Error ? e.message : 'Chain step failed')
         return
       }
     }
@@ -128,11 +105,35 @@ export default function Run() {
     }
 
     startTest(buildConfig(patchedParsed, pattern, form), pattern)
-  }
+  }, [parsed, chainSteps, pattern, form, reset, startTest])
+
+  // Keyboard shortcuts — handleStart is a dep so the shortcut never runs a stale config
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+        e.preventDefault()
+        if (!running && parsed) void handleStart()
+      }
+      if (e.key === 'Escape' && running) {
+        stopTest('manual')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [running, parsed, handleStart, stopTest])
+
+  // Stop the load generator when the page unmounts — otherwise navigating away
+  // mid-run keeps hitting the target with no visible progress or stop control
+  useEffect(() => () => {
+    const s = useTestStore.getState()
+    if (s.running) s.stopTest('manual')
+  }, [])
 
   const desc = parsed ? describeTest(pattern, buildConfig(parsed, pattern, form), form.steps) : ''
 
   function handlePreset(curl: string) {
+    // keep CurlInput's textarea in sync — same event the Postman import uses
+    window.dispatchEvent(new CustomEvent('loadpulse:setcurl', { detail: curl }))
     try { setParsed(parseCurl(curl)) } catch { /* ignore */ }
   }
 
@@ -300,7 +301,7 @@ export default function Run() {
               </div>
             )}
             {chainStatus === 'error' && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149' }}>✗ Chain step failed — check the cURL commands</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149' }}>✗ {chainError || 'Chain step failed — check the cURL commands'}</div>
             )}
           </div>
         )}
