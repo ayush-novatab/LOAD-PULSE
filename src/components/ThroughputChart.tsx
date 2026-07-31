@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react'
+import { readChartTheme, observeTheme } from '../lib/chartTheme'
 import type { TputPoint } from '../lib/types'
 
 interface Props { points: TputPoint[] }
@@ -11,6 +12,7 @@ export default function ThroughputChart({ points }: Props) {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    const theme = readChartTheme(canvas)
 
     const W = canvas.parentElement?.clientWidth || canvas.offsetWidth || 400
     const H = 180
@@ -23,7 +25,7 @@ export default function ThroughputChart({ points }: Props) {
     ctx.clearRect(0, 0, W, H)
 
     if (points.length < 2) {
-      ctx.fillStyle = '#6e7681'
+      ctx.fillStyle = theme.text
       ctx.font = '12px sans-serif'
       ctx.textAlign = 'center'
       ctx.fillText('Waiting for data…', W / 2, H / 2)
@@ -36,12 +38,12 @@ export default function ThroughputChart({ points }: Props) {
     const padL = 44, padR = 12, padT = 12, padB = 24
     const cW = W - padL - padR, cH = H - padT - padB
 
-    ctx.strokeStyle = '#21262d'
+    ctx.strokeStyle = theme.grid
     ctx.lineWidth = 1
     for (let i = 0; i <= 3; i++) {
       const y = padT + cH * (i / 3)
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke()
-      ctx.fillStyle = '#6e7681'
+      ctx.fillStyle = theme.text
       ctx.font = '10px monospace'
       ctx.textAlign = 'right'
       ctx.fillText(Math.round(maxR * (1 - i / 3)) + '/s', padL - 4, y + 3)
@@ -54,19 +56,21 @@ export default function ThroughputChart({ points }: Props) {
 
     // fill
     const grad = ctx.createLinearGradient(0, padT, 0, H - padB)
-    grad.addColorStop(0, 'rgba(46,160,67,0.25)')
-    grad.addColorStop(1, 'rgba(46,160,67,0.02)')
+    grad.addColorStop(0, theme.green)
+    grad.addColorStop(1, theme.green)
     ctx.fillStyle = grad
+    ctx.globalAlpha = 0.15
     ctx.beginPath()
     ctx.moveTo(px(points[0].t), H - padB)
     for (const p of points) ctx.lineTo(px(p.t), py(p.rps))
     ctx.lineTo(px(points[points.length - 1].t), H - padB)
     ctx.closePath()
     ctx.fill()
+    ctx.globalAlpha = 1
 
     // line
     ctx.beginPath()
-    ctx.strokeStyle = '#2ea043'
+    ctx.strokeStyle = theme.green
     ctx.lineWidth = 2
     ctx.lineJoin = 'round'
     let first = true
@@ -84,12 +88,19 @@ export default function ThroughputChart({ points }: Props) {
     if (!canvas?.parentElement) return
     const ro = new ResizeObserver(() => draw())
     ro.observe(canvas.parentElement)
-    return () => ro.disconnect()
+    const unobserveTheme = observeTheme(draw)
+    return () => { ro.disconnect(); unobserveTheme() }
   }, [draw])
+
+  const current = points.length ? points[points.length - 1].rps : 0
+  const peak = points.length ? Math.max(...points.map(p => p.rps)) : 0
+  const label = points.length < 2
+    ? 'Throughput over time chart: waiting for data'
+    : `Throughput over time chart: currently ${current} requests per second, peak ${peak}`
 
   return (
     <div style={{ width: '100%' }}>
-      <canvas ref={ref} style={{ display: 'block' }} />
+      <canvas ref={ref} style={{ display: 'block' }} role="img" aria-label={label} />
     </div>
   )
 }
