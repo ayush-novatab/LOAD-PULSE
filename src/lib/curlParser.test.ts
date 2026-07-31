@@ -58,4 +58,14 @@ describe('parseCurl', () => {
   it('throws when no URL is present', () => {
     expect(() => parseCurl('curl -X POST')).toThrow('No URL found in curl command')
   })
+
+  it("concatenates adjacent quoted segments — the '\\'' escape idiom", () => {
+    const r = parseCurl(`curl https://api.example.com -d 'name=O'\\''Brien'`)
+    expect(r.body).toBe("name=O'Brien")
+  })
+
+  it('keeps backslashes literal inside single quotes', () => {
+    const r = parseCurl(`curl https://api.example.com -d '{"a":"b\\"c"}'`)
+    expect(r.body).toBe('{"a":"b\\"c"}')
+  })
 })

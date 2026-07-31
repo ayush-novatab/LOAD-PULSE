@@ -82,15 +82,12 @@ export function requestToCurl(req: PMRequest, _name: string): string {
     parts.push(`  -H '${h.key}: ${h.value}'`)
   }
 
-  // Body
+  // Body — resolveBody output is already fully encoded (urlencoded mode
+  // percent-encodes pairs itself), so plain -d is correct for every mode.
   const body = resolveBody(req.body)
   if (body) {
-    if (req.body?.mode === 'urlencoded') {
-      parts.push(`  --data-urlencode '${body}'`)
-    } else {
-      const escaped = body.replace(/'/g, "'\\''")
-      parts.push(`  -d '${escaped}'`)
-    }
+    const escaped = body.replace(/'/g, "'\\''")
+    parts.push(`  -d '${escaped}'`)
   }
 
   return parts.join(' \\\n')

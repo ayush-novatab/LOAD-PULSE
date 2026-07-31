@@ -6,21 +6,30 @@ function tokenize(s: string): string[] {
   while (i < s.length) {
     while (i < s.length && /\s/.test(s[i])) i++
     if (i >= s.length) break
-    if (s[i] === '"' || s[i] === "'") {
-      const q = s[i++]
-      let buf = ''
-      while (i < s.length && s[i] !== q) {
-        if (s[i] === '\\' && i + 1 < s.length) { i++; buf += s[i] }
-        else buf += s[i]
+    // A word runs until unquoted whitespace; adjacent quoted and unquoted
+    // segments concatenate ('name=O'\''Brien' is one word), as in a shell.
+    let buf = ''
+    while (i < s.length && !/\s/.test(s[i])) {
+      if (s[i] === "'") {
         i++
+        while (i < s.length && s[i] !== "'") buf += s[i++]
+        i++
+      } else if (s[i] === '"') {
+        i++
+        while (i < s.length && s[i] !== '"') {
+          if (s[i] === '\\' && i + 1 < s.length) { i++; buf += s[i] }
+          else buf += s[i]
+          i++
+        }
+        i++
+      } else if (s[i] === '\\' && i + 1 < s.length) {
+        i++
+        buf += s[i++]
+      } else {
+        buf += s[i++]
       }
-      i++
-      tokens.push(buf)
-    } else {
-      let buf = ''
-      while (i < s.length && !/\s/.test(s[i])) buf += s[i++]
-      tokens.push(buf)
     }
+    tokens.push(buf)
   }
   return tokens
 }
