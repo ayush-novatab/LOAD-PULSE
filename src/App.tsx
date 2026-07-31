@@ -1,5 +1,6 @@
 import { useState, useEffect, Suspense, lazy } from 'react'
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from 'react-router-dom'
+import ErrorBoundary from './components/ErrorBoundary'
 import Run from './pages/Run'
 
 const History = lazy(() => import('./pages/History'))
@@ -52,15 +53,25 @@ const NAV_LINKS = [
   { to: '/docs', label: 'Docs' },
 ]
 
+// Raw localStorage access can throw during render (Safari Lockdown, partitioned
+// iframes, cookie-blocked private modes) — never let the theme white-screen the app.
+function safeGetItem(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function safeSetItem(key: string, value: string): void {
+  try { localStorage.setItem(key, value) } catch { /* storage blocked or full */ }
+}
+
 function Layout({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('_lp_theme') as 'dark' | 'light') || 'dark'
+    return (safeGetItem('_lp_theme') as 'dark' | 'light') || 'dark'
   })
   const [menuOpen, setMenuOpen] = useState(false)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
-    localStorage.setItem('_lp_theme', theme)
+    safeSetItem('_lp_theme', theme)
   }, [theme])
 
   return (
@@ -109,17 +120,29 @@ function PageLoader() {
   return <div className="page-loader">Loading…</div>
 }
 
+// Boundary inside Layout so the nav shell survives a page crash; keyed by
+// pathname so navigating away from a crashed page clears the error state.
+function Page({ children }: { children: React.ReactNode }) {
+  const location = useLocation()
+  return (
+    <Layout>
+      <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>
+    </Layout>
+  )
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<Layout><Run /></Layout>} />
-          <Route path="/history" element={<Layout><History /></Layout>} />
-          <Route path="/compare" element={<Layout><Compare /></Layout>} />
-          <Route path="/swarm" element={<Layout><Swarm /></Layout>} />
-          <Route path="/docs" element={<Layout><Docs /></Layout>} />
-          <Route path="/report" element={<SharedReport />} />
+          <Route path="/" element={<Page><Run /></Page>} />
+          <Route path="/history" element={<Page><History /></Page>} />
+          <Route path="/compare" element={<Page><Compare /></Page>} />
+          <Route path="/swarm" element={<Page><Swarm /></Page>} />
+          <Route path="/docs" element={<Page><Docs /></Page>} />
+          {/* /report renders outside Layout, so it needs its own boundary */}
+          <Route path="/report" element={<ErrorBoundary><SharedReport /></ErrorBoundary>} />
         </Routes>
       </Suspense>
       <InstallBanner />

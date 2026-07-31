@@ -71,6 +71,24 @@ describe('shareReport', () => {
     expect(await decodeReport(token)).toBeNull()
   })
 
+  it('rejects a decodable payload whose report is missing meta (#78)', async () => {
+    const token = await encodeReport({ report: {} } as never)
+    expect(await decodeReport(token)).toBeNull()
+  })
+
+  it('defaults missing failures to an empty object instead of crashing ReportView (#78)', async () => {
+    const report = makeReport()
+    const bare = { meta: report.meta } // no failures key
+    const token = await encodeReport({ report: bare, chartPts: [], tputPts: [] } as never)
+    const decoded = await decodeReport(token)
+    expect(decoded?.report.failures).toEqual({})
+  })
+
+  it('rejects a legacy token whose report is missing meta (#78)', async () => {
+    const legacy = btoa(JSON.stringify({ notmeta: true }))
+    expect(await decodeReport(legacy)).toBeNull()
+  })
+
   it('still decodes a legacy plain-Base64 report (no series) into a payload', async () => {
     const report = makeReport()
     const legacy = btoa(unescape(encodeURIComponent(JSON.stringify(report))))

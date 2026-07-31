@@ -65,6 +65,16 @@ export async function encodeReport(payload: SharePayload): Promise<string> {
   return bytesToBase64Url(gz)
 }
 
+// Decoding succeeding doesn't make the payload a report — the viewer reads
+// report.meta.* and report.failures unconditionally, so validate shape here
+// and let the page's "invalid link" UI handle the rest.
+function sanitizeReport(report: unknown): ReportData | null {
+  if (!report || typeof report !== 'object') return null
+  const r = report as ReportData
+  if (!r.meta || typeof r.meta !== 'object' || r.meta.url == null) return null
+  return { ...r, failures: r.failures && typeof r.failures === 'object' ? r.failures : {} }
+}
+
 export async function decodeReport(token: string): Promise<SharePayload | null> {
   if (token.length > MAX_TOKEN_CHARS) return null
 
@@ -73,10 +83,13 @@ export async function decodeReport(token: string): Promise<SharePayload | null> 
     const json = await gunzip(base64UrlToBytes(token))
     const obj = JSON.parse(json)
     if (obj && typeof obj === 'object' && 'report' in obj) {
-      return {
-        report: obj.report as ReportData,
-        chartPts: Array.isArray(obj.chartPts) ? obj.chartPts : [],
-        tputPts: Array.isArray(obj.tputPts) ? obj.tputPts : [],
+      const report = sanitizeReport(obj.report)
+      if (report) {
+        return {
+          report,
+          chartPts: Array.isArray(obj.chartPts) ? obj.chartPts : [],
+          tputPts: Array.isArray(obj.tputPts) ? obj.tputPts : [],
+        }
       }
     }
   } catch {
@@ -86,8 +99,8 @@ export async function decodeReport(token: string): Promise<SharePayload | null> 
   // Legacy format: standard Base64 of a bare ReportData (pre-compression links).
   // Kept so old shared URLs still open — they render as summary-only (no series).
   try {
-    const report = JSON.parse(decodeURIComponent(escape(atob(token)))) as ReportData
-    if (report && report.meta) return { report, chartPts: [], tputPts: [] }
+    const report = sanitizeReport(JSON.parse(decodeURIComponent(escape(atob(token)))))
+    if (report) return { report, chartPts: [], tputPts: [] }
   } catch {
     // not decodable
   }
