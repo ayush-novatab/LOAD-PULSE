@@ -92,7 +92,8 @@ export function runSwarmSlice(
       win.latencies.push(result.lat)
     }
 
-    accum = getRps(pattern, 0, totalMs, cfg) * shareRef.value * 0.1
+    // accum starts at 0 — the tick at t=totalMs fires before the finish timer
+    // (created later), so a pre-seed here would dispatch one extra tick's worth
     const tickH = setInterval(() => {
       if (stopped) return
       const el = Date.now() - startTime
