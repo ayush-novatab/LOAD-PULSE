@@ -33,7 +33,15 @@ export async function fireRequest(
   const o = applyVars(opts, varSpace)
   const t0 = Date.now()
   const ctrl = new AbortController()
-  const combined = AbortSignal.any ? AbortSignal.any([ctrl.signal, signal]) : ctrl.signal
+  let combined: AbortSignal
+  if (AbortSignal.any) {
+    combined = AbortSignal.any([ctrl.signal, signal])
+  } else {
+    // manual fallback: forward the caller's stop signal into the local controller
+    combined = ctrl.signal
+    if (signal.aborted) ctrl.abort()
+    else signal.addEventListener('abort', () => ctrl.abort(), { once: true })
+  }
   const th = setTimeout(() => ctrl.abort(), timeout)
 
   try {
@@ -45,13 +53,16 @@ export async function fireRequest(
     const lat = Date.now() - t0
 
     let bodyTxt: string | null = null
-    if (captureBody && !res.ok) {
-      try { bodyTxt = (await res.text()).slice(0, 300) } catch { /* ignore */ }
+    let fullBody: string | null = null
+    if (bodyCheckOn || (captureBody && !res.ok)) {
+      try { fullBody = await res.text() } catch { /* ignore */ }
+      // the stored copy is truncated for display; matching uses the full text
+      if (captureBody && !res.ok && fullBody !== null) bodyTxt = fullBody.slice(0, 300)
     }
 
     const codeOk = res.status >= scMin && res.status <= scMax
     const latOk = !latThreshOn || lat <= latThresh
-    const bodyOk = !bodyCheckOn || !bodyTxt || bodyTxt.includes(bodyCheck)
+    const bodyOk = !bodyCheckOn || fullBody === null || fullBody.includes(bodyCheck)
     const success = codeOk && latOk && bodyOk
 
     const reasons: string[] = []

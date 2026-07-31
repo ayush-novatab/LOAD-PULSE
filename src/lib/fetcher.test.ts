@@ -20,6 +20,9 @@ beforeAll(async () => {
       const has = url.searchParams.get('has') === '1'
       res.writeHead(500, { 'Content-Type': 'text/plain' })
       res.end(has ? 'the needle is here' : 'no match here')
+    } else if (url.pathname === '/long') {
+      res.writeHead(500, { 'Content-Type': 'text/plain' })
+      res.end('x'.repeat(350) + 'needle-at-the-end')
     } else if (url.pathname === '/slow') {
       const ms = Number(url.searchParams.get('ms') ?? '0')
       setTimeout(() => {
@@ -77,6 +80,19 @@ describe('fireRequest', () => {
     expect(r.ok).toBe(true)
   })
 
+  it('matches the body check against the full body, not the 300-char display copy (#58)', async () => {
+    const r = await fireRequest(parsed('/long'), 5000, 500, 599, false, 0, true, 'needle-at-the-end', true, new AbortController().signal)
+    expect(r.ok).toBe(true)
+    // the stored copy stays truncated for display
+    expect(r.bodyText?.length).toBeLessThanOrEqual(300)
+  })
+
+  it('applies the body check to in-range (2xx) responses too (#58)', async () => {
+    const r = await fireRequest(parsed('/ok'), 5000, 200, 299, false, 0, true, 'absent-needle', false, new AbortController().signal)
+    expect(r.ok).toBe(false)
+    expect(r.reason).toContain('Body missing "absent-needle"')
+  })
+
   it('times out and reports a net failure when the server is slower than the timeout', async () => {
     const r = await fireRequest(parsed('/slow?ms=200'), 20, 200, 299, false, 0, false, '', false, new AbortController().signal)
     expect(r.ok).toBe(false)
@@ -99,5 +115,33 @@ describe('fireRequest', () => {
     expect(r.status).toBeNull()
     expect(r.badgeType).toBe('net')
     expect(r.reason.length).toBeGreaterThan(0)
+  })
+})
+
+describe('fireRequest without AbortSignal.any (#59)', () => {
+  const origAny = AbortSignal.any
+  beforeAll(() => {
+    // simulate an older runtime where AbortSignal.any does not exist
+    (AbortSignal as unknown as Record<string, unknown>).any = undefined
+  })
+  afterAll(() => {
+    (AbortSignal as unknown as Record<string, unknown>).any = origAny
+  })
+
+  it('respects an already-aborted external signal', async () => {
+    const ac = new AbortController()
+    ac.abort()
+    const r = await fireRequest(parsed('/slow?ms=300'), 5000, 200, 299, false, 0, false, '', false, ac.signal)
+    expect(r.ok).toBe(false)
+    expect(r.status).toBeNull()
+  })
+
+  it('cancels an in-flight request when the external signal aborts', async () => {
+    const ac = new AbortController()
+    setTimeout(() => ac.abort(), 30)
+    const t0 = Date.now()
+    const r = await fireRequest(parsed('/slow?ms=400'), 5000, 200, 299, false, 0, false, '', false, ac.signal)
+    expect(r.ok).toBe(false)
+    expect(Date.now() - t0).toBeLessThan(350)
   })
 })
