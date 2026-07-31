@@ -144,13 +144,14 @@ export default function Run() {
 
   return (
     <div className="run-page">
+      <h1 className="sr-only">Run a load test</h1>
 
       {/* ── cURL ── */}
       <div className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div />
           <button className="btn btn-ghost btn-sm" onClick={() => setShowPostman(true)} title="Import from Postman">
-            📦 Import from Postman
+            <span aria-hidden="true">📦</span> Import from Postman
           </button>
         </div>
         <CurlInput onParsed={setParsed} />
@@ -252,14 +253,16 @@ export default function Run() {
         </div>
 
         <div className="card config-criteria">
-          <button
-            className="card-title criteria-toggle"
-            onClick={() => setShowCriteria(s => !s)}
-            aria-expanded={showCriteria}
-            aria-controls="criteria-panel"
-          >
-            Success Criteria <span className="criteria-chevron" aria-hidden="true">{showCriteria ? '▲' : '▼'}</span>
-          </button>
+          <h2 style={{ margin: 0 }}>
+            <button
+              className="card-title criteria-toggle"
+              onClick={() => setShowCriteria(s => !s)}
+              aria-expanded={showCriteria}
+              aria-controls="criteria-panel"
+            >
+              Success Criteria <span className="criteria-chevron" aria-hidden="true">{showCriteria ? '▲' : '▼'}</span>
+            </button>
+          </h2>
           {showCriteria && (
             <div id="criteria-panel" style={{ marginTop: 12 }}>
               <SuccessCriteria cfg={form} set={p => patch(p as Partial<FormState>)} />
@@ -282,14 +285,16 @@ export default function Run() {
 
       {/* ── Request Chaining ── */}
       <div className="card">
-        <button
-          className="card-title criteria-toggle"
-          onClick={() => setShowChain(s => !s)}
-          aria-expanded={showChain}
-          aria-controls="chain-panel"
-        >
-          Request Chaining <span className="criteria-chevron" aria-hidden="true">{showChain ? '▲' : '▼'}</span>
-        </button>
+        <h2 style={{ margin: 0 }}>
+          <button
+            className="card-title criteria-toggle"
+            onClick={() => setShowChain(s => !s)}
+            aria-expanded={showChain}
+            aria-controls="chain-panel"
+          >
+            Request Chaining <span className="criteria-chevron" aria-hidden="true">{showChain ? '▲' : '▼'}</span>
+          </button>
+        </h2>
         {!showChain && chainSteps.length > 0 && (
           <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
             {chainSteps.filter(s => s.curl.trim()).length} setup step(s) configured
@@ -344,23 +349,23 @@ export default function Run() {
           {running && (
             <div className="charts-grid">
               <div className="card">
-                <div className="card-title">Latency over time</div>
+                <h2 className="card-title">Latency over time</h2>
                 <LatencyChart points={chartPts} />
               </div>
               <div className="card">
-                <div className="card-title">Throughput (req/s)</div>
+                <h2 className="card-title">Throughput (req/s)</h2>
                 <ThroughputChart points={tputPts} />
               </div>
             </div>
           )}
 
           <div className="card">
-            <div className="card-title">Status distribution</div>
+            <h2 className="card-title">Status distribution</h2>
             <StatusDist codes={stats.codes} total={stats.sent} />
           </div>
 
           <div className="card">
-            <div className="card-title">Request log</div>
+            <h2 className="card-title">Request log</h2>
             <LogFeed entries={logBuf} />
           </div>
         </>

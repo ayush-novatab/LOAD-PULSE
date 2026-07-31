@@ -50,7 +50,7 @@ export default function CurlInput({ onParsed }: Props) {
 
   return (
     <div>
-      <div className="card-title">cURL Command</div>
+      <h2 className="card-title">cURL Command</h2>
       <textarea
         className="curl-area w-full"
         aria-label="cURL command"

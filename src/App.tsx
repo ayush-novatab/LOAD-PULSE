@@ -38,18 +38,18 @@ function InstallBanner() {
       alignItems: 'center', gap: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
       fontSize: 13,
     }}>
-      <span>⚡ Install LoadPulse as an app</span>
+      <span><span aria-hidden="true">⚡</span> Install LoadPulse as an app</span>
       <button className="btn btn-primary btn-sm" onClick={() => { prompt.prompt(); setDismissed(true) }}>Install</button>
       <button className="btn btn-ghost btn-sm" onClick={() => setDismissed(true)} aria-label="Dismiss install banner">✕</button>
     </div>
   )
 }
 
-const NAV_LINKS = [
+const NAV_LINKS: Array<{ to: string; label: React.ReactNode; end?: boolean }> = [
   { to: '/', label: 'Run', end: true },
   { to: '/history', label: 'History' },
   { to: '/compare', label: 'Compare' },
-  { to: '/swarm', label: '🐝 Swarm' },
+  { to: '/swarm', label: <><span aria-hidden="true">🐝</span> Swarm</> },
   { to: '/docs', label: 'Docs' },
 ]
 
@@ -78,7 +78,7 @@ function Layout({ children }: { children: React.ReactNode }) {
     <div className="app-shell">
       <nav className="top-nav">
         <div className="nav-brand">
-          ⚡ <span>LoadPulse</span>
+          <span aria-hidden="true">⚡</span> <span>LoadPulse</span>
         </div>
         <div className={'nav-links' + (menuOpen ? ' open' : '')}>
           {NAV_LINKS.map(l => (

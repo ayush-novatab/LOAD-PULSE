@@ -68,7 +68,7 @@ export default function Compare() {
 
   return (
     <div>
-      <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Compare Runs</h2>
+      <h1 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, marginTop: 0 }}>Compare Runs</h1>
       <div className="form-row mb-16">
         <div className="form-group">
           <label className="form-label">Run A</label>

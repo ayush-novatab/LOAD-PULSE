@@ -130,7 +130,7 @@ export default function ChainBuilder({ steps, onChange }: Props) {
 
       {steps.length > 0 && (
         <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text3)', background: 'var(--bg2)', borderRadius: 4, padding: '7px 10px' }}>
-          💡 Use <code style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{'{{chain.varName}}'}</code> in your main cURL command to inject extracted values.
+          <span aria-hidden="true">💡</span> Use <code style={{ color: 'var(--accent)', fontFamily: 'var(--font-mono)' }}>{'{{chain.varName}}'}</code> in your main cURL command to inject extracted values.
         </div>
       )}
     </div>

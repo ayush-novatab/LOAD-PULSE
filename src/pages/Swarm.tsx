@@ -53,7 +53,7 @@ export default function Swarm() {
   return (
     <div className="run-page">
       <div className="card">
-        <div className="card-title">🐝 Swarm Mode</div>
+        <h1 className="card-title"><span aria-hidden="true">🐝</span> Swarm Mode</h1>
         <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 4 }}>
           Turn multiple browsers into a distributed load-generation cluster — no server, no cloud workers.
           Peer-to-peer over WebRTC. One person hosts, others join with a room code and each device fires its
@@ -64,7 +64,7 @@ export default function Swarm() {
       {role === 'idle' && (
         <div className="config-row">
           <div className="card config-pattern">
-            <div className="card-title">Host a swarm test</div>
+            <h2 className="card-title">Host a swarm test</h2>
             <div style={{ marginTop: 12 }}>
               <CurlInput onParsed={setParsed} />
             </div>
@@ -88,7 +88,7 @@ export default function Swarm() {
           </div>
 
           <div className="card config-criteria">
-            <div className="card-title">Join a swarm</div>
+            <h2 className="card-title">Join a swarm</h2>
             <div className="form-group" style={{ marginTop: 12 }}>
               <label className="form-label" htmlFor="join-code">Room code</label>
               <input
@@ -120,7 +120,7 @@ export default function Swarm() {
 
       {role === 'host' && status === 'waiting' && (
         <div className="card">
-          <div className="card-title">Room ready — share this with your swarm</div>
+          <h2 className="card-title">Room ready — share this with your swarm</h2>
           <div style={{ display: 'flex', gap: 20, alignItems: 'center', marginTop: 8, flexWrap: 'wrap' }}>
             <div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -155,7 +155,7 @@ export default function Swarm() {
 
       {role === 'node' && status === 'waiting' && (
         <div className="card">
-          <div className="card-title">Connected — waiting for host to start…</div>
+          <h2 className="card-title">Connected — waiting for host to start…</h2>
           <p style={{ fontSize: 12, color: 'var(--text3)' }}>Room: {roomId}</p>
         </div>
       )}
@@ -170,10 +170,10 @@ export default function Swarm() {
       {(status === 'running' || status === 'done') && (
         <>
           <div className="card">
-            <div className="card-title">
+            <h2 className="card-title">
               {role === 'host' ? `Swarm running — ${nodeCount} node(s)` : `Reporting to swarm — room ${roomId}`}
               {status === 'done' && '  ✓ done'}
-            </div>
+            </h2>
             <ProgressBar pct={progressPct} />
           </div>
 
@@ -181,7 +181,7 @@ export default function Swarm() {
             <>
               <div className="card">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div className="card-title">Aggregated stats (all nodes)</div>
+                  <h2 className="card-title">Aggregated stats (all nodes)</h2>
                   <button className="btn btn-ghost btn-sm" onClick={exportReport} title="Download swarm report as JSON">
                     ⬇ Export Report
                   </button>
@@ -199,22 +199,22 @@ export default function Swarm() {
 
               <div className="charts-grid">
                 <div className="card">
-                  <div className="card-title">Combined throughput (req/s)</div>
+                  <h2 className="card-title">Combined throughput (req/s)</h2>
                   <ThroughputChart points={tputPts} />
                 </div>
                 <div className="card">
-                  <div className="card-title">Status distribution</div>
+                  <h2 className="card-title">Status distribution</h2>
                   <StatusDist codes={agg.codes} total={agg.sent} />
                 </div>
               </div>
 
               <div className="card">
-                <div className="card-title">Per-node latency</div>
+                <h2 className="card-title">Per-node latency</h2>
                 <NodeLatencyBars nodes={Object.values(nodes)} />
               </div>
 
               <div className="card">
-                <div className="card-title">Nodes</div>
+                <h2 className="card-title">Nodes</h2>
                 <table className="hist-table">
                   <thead><tr><th>Node</th><th>Status</th><th>Sent</th><th>OK</th><th>Fail</th><th></th></tr></thead>
                   <tbody>
@@ -235,7 +235,7 @@ export default function Swarm() {
 
           {role === 'node' && (
             <div className="card">
-              <div className="card-title">Your contribution</div>
+              <h2 className="card-title">Your contribution</h2>
               <div style={{ display: 'flex', gap: 24, marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 13 }}>
                 <span>Sent: {agg.sent}</span>
                 <span>OK: {agg.ok}</span>

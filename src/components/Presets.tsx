@@ -34,7 +34,7 @@ interface Props {
 export default function Presets({ onSelect }: Props) {
   return (
     <div>
-      <div className="card-title">Presets</div>
+      <h2 className="card-title">Presets</h2>
       <div className="preset-grid">
         {PRESETS.map(p => (
           <button key={p.name} className="preset-card" onClick={() => onSelect(p.curl)}>

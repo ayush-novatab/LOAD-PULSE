@@ -6,7 +6,7 @@ export default function History() {
   return (
     <div>
       <div className="flex items-center justify-between mb-16">
-        <h2 style={{ fontSize: 16, fontWeight: 600 }}>Run History</h2>
+        <h1 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Run History</h1>
         {runs.length > 0 && (
           <button className="btn btn-ghost btn-sm" onClick={clearAll}>Clear All</button>
         )}

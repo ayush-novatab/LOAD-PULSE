@@ -64,7 +64,7 @@ export default function ReportView({ report, log = [], latencies, chartPts: char
   return (
     <div>
       <div className="section-sep" />
-      <div className="card-title mb-12">Final Report</div>
+      <h2 className="card-title mb-12">Final Report</h2>
 
       <div className="stats-grid mb-16">
         <div className="stat-box">
@@ -110,17 +110,17 @@ export default function ReportView({ report, log = [], latencies, chartPts: char
       </div>
 
       <div className="card mb-8">
-        <div className="card-title">Latency Over Time</div>
+        <h3 className="card-title">Latency Over Time</h3>
         <LatencyChart points={chartPts} />
       </div>
 
       <div className="card mb-8">
-        <div className="card-title">Throughput (req/s)</div>
+        <h3 className="card-title">Throughput (req/s)</h3>
         <ThroughputChart points={tputPts} />
       </div>
 
       <div className="card mb-16">
-        <div className="card-title">Latency Distribution</div>
+        <h3 className="card-title">Latency Distribution</h3>
         <Histogram points={chartPts} />
       </div>
 
@@ -132,7 +132,7 @@ export default function ReportView({ report, log = [], latencies, chartPts: char
 
       {lats.length > 0 && (
         <div className="card mb-16">
-          <div className="card-title mb-12">Apdex Score & SLA</div>
+          <h3 className="card-title mb-12">Apdex Score & SLA</h3>
           <ApdexCard
             latencies={lats}
             successRate={parseFloat(m.successRate)}
@@ -145,7 +145,7 @@ export default function ReportView({ report, log = [], latencies, chartPts: char
 
       {failEntries.length > 0 && (
         <div>
-          <div className="card-title mb-8">Failure Breakdown</div>
+          <h3 className="card-title mb-8">Failure Breakdown</h3>
           {failEntries.map(([reason, g]) => (
             <div key={reason} className="failure-item">
               <div className="failure-header">
@@ -174,7 +174,7 @@ export default function ReportView({ report, log = [], latencies, chartPts: char
             btn.textContent = '✗ Copy failed'
           }
           setTimeout(() => { btn.textContent = orig }, 2000)
-        }}>🔗 Share Report</button>
+        }}><span aria-hidden="true">🔗</span> Share Report</button>
         <button className="btn btn-ghost" onClick={exportJson}>↓ JSON</button>
         <button className="btn btn-ghost" onClick={copyMd}>⎘ Markdown</button>
         <button className="btn btn-ghost" onClick={handleCSV}>↓ CSV</button>

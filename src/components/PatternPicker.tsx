@@ -16,7 +16,7 @@ interface Props {
 export default function PatternPicker({ value, onChange }: Props) {
   return (
     <div>
-      <div className="card-title">Load Pattern</div>
+      <h2 className="card-title">Load Pattern</h2>
       <div className="pattern-tabs">
         {PATTERNS.map(p => (
           <button
