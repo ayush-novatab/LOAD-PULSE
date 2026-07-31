@@ -59,7 +59,7 @@ export default function CurlInput({ onParsed }: Props) {
         onChange={e => handleChange(e.target.value)}
         spellCheck={false}
       />
-      {err && <div className="curl-error">⚠ {err}</div>}
+      {err && <div className="curl-error" role="alert">⚠ {err}</div>}
       {parsed && !err && (
         <div className="mt-8">
           <div className="pill-row">

@@ -300,7 +300,7 @@ export default function Run() {
           <div id="chain-panel" style={{ marginTop: 12 }}>
             <ChainBuilder steps={chainSteps} onChange={setChainSteps} />
             {chainStatus === 'running' && (
-              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)' }}>⏳ Running chain steps…</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)' }} role="status">⏳ Running chain steps…</div>
             )}
             {chainStatus === 'done' && Object.keys(chainVars).length > 0 && (
               <div style={{ marginTop: 8, fontSize: 11, color: '#2ea043', fontFamily: 'var(--font-mono)' }}>
@@ -308,7 +308,7 @@ export default function Run() {
               </div>
             )}
             {chainStatus === 'error' && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149' }}>✗ {chainError || 'Chain step failed — check the cURL commands'}</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149' }} role="alert">✗ {chainError || 'Chain step failed — check the cURL commands'}</div>
             )}
           </div>
         )}

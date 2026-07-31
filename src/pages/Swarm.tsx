@@ -162,7 +162,7 @@ export default function Swarm() {
 
       {status === 'error' && (
         <div className="card">
-          <div style={{ color: '#f85149' }}>✗ {errorMsg}</div>
+          <div style={{ color: '#f85149' }} role="alert">✗ {errorMsg}</div>
           <button className="btn btn-ghost" style={{ marginTop: 8 }} onClick={leave}>Back</button>
         </div>
       )}

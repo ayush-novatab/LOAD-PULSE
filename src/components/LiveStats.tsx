@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { useTestStore } from '../store/testStore'
 import { percentile } from '../lib/percentile'
 
@@ -10,10 +11,20 @@ export default function LiveStats() {
   } : null
   const sr = stats.sent ? (stats.ok / stats.sent * 100).toFixed(1) : '—'
 
+  // Screen-reader progress summary, refreshed every 10s — the visible numbers
+  // change several times a second, far too often to announce individually.
+  const announceKey = Math.floor(elapsedSec / 10)
+  const announcement = useMemo(() => {
+    if (announceKey === 0) return ''
+    return `Test running: ${stats.sent} sent, ${stats.fail} failed, ${sr}% success, ${actualRps} requests per second`
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deliberately snapshot only when the 10s window rolls over
+  }, [announceKey])
+
   return (
     <div>
+      <div className="sr-only" aria-live="polite">{announcement}</div>
       {thresholdMsg && (
-        <div style={{ background: 'var(--red-t)', border: '1px solid var(--red)', borderRadius: 'var(--radius)', padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#f85149' }}>
+        <div role="alert" style={{ background: 'var(--red-t)', border: '1px solid var(--red)', borderRadius: 'var(--radius)', padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#f85149' }}>
           {thresholdMsg}
         </div>
       )}
