@@ -8,7 +8,14 @@ export interface PostmanRequest {
 }
 
 interface PMHeader { key: string; value: string; disabled?: boolean }
-interface PMUrl { raw?: string; protocol?: string; host?: string[]; path?: string[] }
+interface PMUrl {
+  raw?: string
+  protocol?: string
+  host?: string[]
+  port?: string
+  path?: string[]
+  query?: Array<{ key: string; value: string; disabled?: boolean }>
+}
 interface PMBody {
   mode?: string
   raw?: string
@@ -47,8 +54,13 @@ function resolveUrl(url: string | PMUrl | undefined): string {
   if (url.raw) return url.raw
   const proto = url.protocol ?? 'https'
   const host = (url.host ?? []).join('.')
+  const port = url.port ? `:${url.port}` : ''
   const path = (url.path ?? []).join('/')
-  return `${proto}://${host}/${path}`
+  const query = (url.query ?? [])
+    .filter(q => !q.disabled)
+    .map(q => `${q.key}=${q.value}`)
+    .join('&')
+  return `${proto}://${host}${port}/${path}${query ? `?${query}` : ''}`
 }
 
 function resolveBody(body: PMBody | undefined): string | null {

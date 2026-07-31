@@ -32,6 +32,25 @@ describe('requestToCurl', () => {
     expect(parsed.method).toBe('POST')
   })
 
+  it('keeps port and query params when the URL is a structured object without raw', () => {
+    const curl = requestToCurl({
+      method: 'GET',
+      url: {
+        protocol: 'https',
+        host: ['api', 'test'],
+        port: '8443',
+        path: ['search'],
+        query: [
+          { key: 'q', value: 'foo' },
+          { key: 'limit', value: '10' },
+          { key: 'skip', value: 'x', disabled: true },
+        ],
+      },
+    }, 'Search')
+
+    expect(curl).toContain("'https://api.test:8443/search?q=foo&limit=10'")
+  })
+
   it('escapes single quotes in urlencoded values for shell safety', () => {
     const curl = requestToCurl({
       method: 'POST',
