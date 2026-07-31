@@ -47,7 +47,9 @@ export default function ThroughputChart({ points }: Props) {
       ctx.fillText(Math.round(maxR * (1 - i / 3)) + '/s', padL - 4, y + 3)
     }
 
-    const px = (t: number) => padL + ((t - minT) / (maxT - minT)) * cW
+    // all points can share one timestamp (minT === maxT) — avoid a NaN blank plot
+    const span = Math.max(1, maxT - minT)
+    const px = (t: number) => padL + ((t - minT) / span) * cW
     const py = (r: number) => padT + (1 - r / maxR) * cH
 
     // fill

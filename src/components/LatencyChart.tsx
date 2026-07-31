@@ -50,7 +50,9 @@ export default function LatencyChart({ points }: Props) {
       ctx.fillText(v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v) + 'ms', padL - 4, y + 3)
     }
 
-    const px = (t: number) => padL + ((t - minT) / (maxT - minT)) * cW
+    // all points can share one timestamp (minT === maxT) — avoid a NaN blank plot
+    const span = Math.max(1, maxT - minT)
+    const px = (t: number) => padL + ((t - minT) / span) * cW
     const py = (l: number) => padT + (1 - l / maxL) * cH
 
     // ok dots (green) / fail dots (red)
