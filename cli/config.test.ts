@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest'
+import { writeFileSync, mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { resolveConfig } from './config'
 
 const CURL = 'curl https://api.test/health'
@@ -31,6 +34,38 @@ describe('resolveConfig numeric args (#52)', () => {
     expect(cfg.duration).toBe(60)
     expect(cfg.concurrency).toBe(5)
     expect(cfg.timeout).toBe(3000)
+  })
+})
+
+describe('resolveConfig file/CLI precedence (#89)', () => {
+  function writeConfig(cfg: object): string {
+    const dir = mkdtempSync(join(tmpdir(), 'loadpulse-test-'))
+    const p = join(dir, 'loadpulse.json')
+    writeFileSync(p, JSON.stringify(cfg))
+    return p
+  }
+
+  it('CLI flags override config-file values', () => {
+    const file = writeConfig({ curl: CURL, rate: 5, duration: 10 })
+    const cfg = resolveConfig(['node', 'loadpulse', 'run', '--config', file, '--rate', '25'])
+    expect(cfg.rate).toBe(25)      // CLI wins
+    expect(cfg.duration).toBe(10)  // file value kept
+  })
+
+  it('merges gates from file and CLI', () => {
+    const file = writeConfig({ curl: CURL, gates: { failUnder: 90 } })
+    const cfg = resolveConfig(['node', 'loadpulse', 'run', '--config', file, '--p95-under', '300'])
+    expect(cfg.gates).toEqual({ failUnder: 90, p95Under: 300 })
+  })
+
+  it('a bare positional path is treated as the config file', () => {
+    const file = writeConfig({ curl: CURL, rate: 7 })
+    const cfg = resolveConfig(['node', 'loadpulse', file])
+    expect(cfg.rate).toBe(7)
+  })
+
+  it('throws when no cURL is provided anywhere', () => {
+    expect(() => resolveConfig(['node', 'loadpulse', 'run', '--rate', '5'])).toThrow(/No cURL/)
   })
 })
 
