@@ -63,6 +63,17 @@ function resolveBody(body: PMBody | undefined): string | null {
   return null
 }
 
+// Resolve request/collection-level auth into concrete headers so it survives
+// both the curl rendering and the parsed PostmanRequest (see parsePostmanCollection).
+function resolveAuthHeaders(auth: PMRequest['auth']): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (auth?.type === 'bearer') {
+    const tok = auth.bearer?.find(b => b.key === 'token')?.value ?? ''
+    headers['Authorization'] = `Bearer ${tok}`
+  }
+  return headers
+}
+
 export function requestToCurl(req: PMRequest, _name: string): string {
   const method = (req.method ?? 'GET').toUpperCase()
   const url = resolveUrl(req.url)
@@ -71,9 +82,8 @@ export function requestToCurl(req: PMRequest, _name: string): string {
   const parts: string[] = [`curl -X ${method} '${url}'`]
 
   // Auth
-  if (req.auth?.type === 'bearer') {
-    const tok = req.auth.bearer?.find(b => b.key === 'token')?.value ?? ''
-    parts.push(`  -H 'Authorization: Bearer ${tok}'`)
+  for (const [key, value] of Object.entries(resolveAuthHeaders(req.auth))) {
+    parts.push(`  -H '${key}: ${value}'`)
   }
 
   // Headers
@@ -82,15 +92,13 @@ export function requestToCurl(req: PMRequest, _name: string): string {
     parts.push(`  -H '${h.key}: ${h.value}'`)
   }
 
-  // Body
+  // Body — resolveBody already returns the exact wire format for both raw and
+  // urlencoded bodies. Emit it verbatim with -d; using --data-urlencode here
+  // would make curl re-encode an already-encoded body (double-encoding).
   const body = resolveBody(req.body)
   if (body) {
-    if (req.body?.mode === 'urlencoded') {
-      parts.push(`  --data-urlencode '${body}'`)
-    } else {
-      const escaped = body.replace(/'/g, "'\\''")
-      parts.push(`  -d '${escaped}'`)
-    }
+    const escaped = body.replace(/'/g, "'\\''")
+    parts.push(`  -d '${escaped}'`)
   }
 
   return parts.join(' \\\n')
@@ -116,6 +124,9 @@ export function parsePostmanCollection(json: unknown): PostmanRequest[] {
       for (const h of request.header ?? []) {
         if (!h.disabled) headers[h.key] = h.value
       }
+      // Bearer auth lives on request.auth, not request.header — apply it here so
+      // authenticated requests import with their Authorization header intact (was 401ing).
+      Object.assign(headers, resolveAuthHeaders(request.auth))
       return {
         name,
         method: (request.method ?? 'GET').toUpperCase(),
