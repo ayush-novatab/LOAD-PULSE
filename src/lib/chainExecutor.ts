@@ -47,8 +47,9 @@ export async function runChain(steps: ChainStep[], timeout = 10000): Promise<Cha
       if (injected.body !== null) init.body = injected.body
 
       const res = await fetch(injected.url, init)
-      clearTimeout(th)
 
+      // Keep the abort timer armed while the body streams in — a server can
+      // send headers fast and then stall the body forever.
       let bodyText = ''
       try { bodyText = await res.text() } catch { /* ignore */ }
 
@@ -65,6 +66,8 @@ export async function runChain(steps: ChainStep[], timeout = 10000): Promise<Cha
         }
       }
     } catch {
+      /* step failed — move on */
+    } finally {
       clearTimeout(th)
     }
   }
