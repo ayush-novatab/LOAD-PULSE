@@ -1,6 +1,6 @@
 import type { LogEntry, ReportData } from './types'
 
-export function exportCSV(rows: object[], filename: string) {
+export function toCsv(rows: object[]): string {
   const keys = Object.keys(rows[0] || {})
   const header = keys.join(',')
   const lines = rows.map(r =>
@@ -11,8 +11,12 @@ export function exportCSV(rows: object[], filename: string) {
         : v
     }).join(',')
   )
-  const csv = [header, ...lines].join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  // BOM so Excel decodes UTF-8 instead of the system ANSI codepage
+  return '\uFEFF' + [header, ...lines].join('\n')
+}
+
+export function exportCSV(rows: object[], filename: string) {
+  const blob = new Blob([toCsv(rows)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url; a.download = filename; a.click()
