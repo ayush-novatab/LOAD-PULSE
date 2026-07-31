@@ -7,7 +7,7 @@
   --border2: #484f58;
   --text: #e6edf3;
   --text2: #8b949e;
-  --text3: #6e7681;
+  --text3: #848d97; /* ≥4.5:1 on bg/bg1/bg2 (WCAG AA) */
   --accent: #388bfd;
   --accent-h: #58a6ff;
   --green: #2ea043;
@@ -33,7 +33,7 @@
   --border2: #afb8c1;
   --text: #1f2328;
   --text2: #57606a;
-  --text3: #6e7781;
+  --text3: #5c6570; /* ≥4.5:1 on bg/bg1/bg2 (WCAG AA) */
   --accent: #0969da;
   --accent-h: #0550ae;
   --green: #1a7f37;
@@ -68,7 +68,16 @@ button {
   font-size: 13px;
   cursor: pointer;
   border: none;
-  outline: none;
+}
+
+/* keyboard users need a visible focus ring; :focus-visible keeps it off mouse clicks */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 input, textarea, select {
@@ -79,7 +88,6 @@ input, textarea, select {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 6px 10px;
-  outline: none;
   transition: border-color .15s;
 }
 input:focus, textarea:focus, select:focus { border-color: var(--accent); }
