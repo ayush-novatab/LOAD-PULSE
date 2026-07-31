@@ -99,6 +99,15 @@ export function parseArgs(argv: string[]): ParsedArgs {
   return args
 }
 
+const PATTERNS: readonly PatternType[] = ['constant', 'ramp', 'step', 'spike', 'soak']
+
+function requirePositive(flag: string, value: number): number {
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`${flag} must be a positive number`)
+  }
+  return value
+}
+
 export function resolveConfig(argv: string[]): CliConfig {
   const args = parseArgs(argv)
 
@@ -110,11 +119,16 @@ export function resolveConfig(argv: string[]): CliConfig {
   }
 
   if (args.curl)        base.curl        = args.curl
-  if (args.pattern)     base.pattern     = args.pattern as PatternType
-  if (args.rate)        base.rate        = args.rate
-  if (args.duration)    base.duration    = args.duration
-  if (args.concurrency) base.concurrency = args.concurrency
-  if (args.timeout)     base.timeout     = args.timeout
+  if (args.pattern !== undefined) {
+    if (!PATTERNS.includes(args.pattern as PatternType)) {
+      throw new Error(`Unknown --pattern "${args.pattern}". Expected one of: ${PATTERNS.join(', ')}`)
+    }
+    base.pattern = args.pattern as PatternType
+  }
+  if (args.rate        !== undefined) base.rate        = requirePositive('--rate', args.rate)
+  if (args.duration    !== undefined) base.duration    = requirePositive('--duration', args.duration)
+  if (args.concurrency !== undefined) base.concurrency = requirePositive('--concurrency', args.concurrency)
+  if (args.timeout     !== undefined) base.timeout     = requirePositive('--timeout', args.timeout)
   if (args.failUnder !== undefined) base.gates!.failUnder = args.failUnder
   if (args.p95Under  !== undefined) base.gates!.p95Under  = args.p95Under
   if (args.p99Under  !== undefined) base.gates!.p99Under  = args.p99Under
