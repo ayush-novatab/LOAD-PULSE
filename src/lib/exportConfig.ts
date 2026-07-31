@@ -60,7 +60,7 @@ function reconstructCurl(parsed: ParsedCurl): string {
     parts.push(`-H "${k}: ${v.replace(/"/g, '\\"')}"`)
   }
   if (parsed.body !== null) {
-    parts.push(`-d '${parsed.body.replace(/'/g, "\\'")}'`)
+    parts.push(`-d '${parsed.body.replace(/'/g, "'\\''")}'`)
     if (!parsed.method || parsed.method === 'GET') parts.splice(1, 0, '-X POST')
   }
   parts.push(`"${parsed.url}"`)
