@@ -15,7 +15,12 @@ export interface Extractor {
 export type ChainVars = Record<string, string>
 
 async function getNestedValue(obj: unknown, path: string): Promise<string | null> {
-  const parts = path.split('.')
+  // Accept JSONPath-style paths: strip a leading `$`/`$.` and normalize
+  // bracket indices (`items[0]` / `items["key"]`) to dot segments.
+  const normalized = path
+    .replace(/^\$\.?/, '')
+    .replace(/\[(?:'([^']*)'|"([^"]*)"|(\d+))\]/g, (_, sq, dq, idx) => `.${sq ?? dq ?? idx}`)
+  const parts = normalized.split('.').filter(p => p !== '')
   let cur: unknown = obj
   for (const p of parts) {
     if (cur && typeof cur === 'object' && p in (cur as object)) {

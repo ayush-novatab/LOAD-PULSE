@@ -29,6 +29,18 @@ describe('runChain', () => {
     expect(vars).toEqual({ token: 'abc123' })
   })
 
+  it('traverses arrays via bracket syntax like data.items[0].id (#50)', async () => {
+    mockFetch(() => jsonResponse('{"data":{"items":[{"id":"first"},{"id":"second"}]}}'))
+    const vars = await runChain([step([{ varName: 'id', source: 'body', path: 'data.items[0].id' }])])
+    expect(vars).toEqual({ id: 'first' })
+  })
+
+  it('accepts JSONPath-style paths with a leading $. (#50)', async () => {
+    mockFetch(() => jsonResponse('{"data":{"token":"tok"}}'))
+    const vars = await runChain([step([{ varName: 't', source: 'body', path: '$.data.token' }])])
+    expect(vars).toEqual({ t: 'tok' })
+  })
+
   it('aborts a stalled body read via the step timeout instead of hanging (#49)', async () => {
     mockFetch((_url, init) => Promise.resolve({
       headers: new Headers(),
