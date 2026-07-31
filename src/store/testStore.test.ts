@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { TestConfig } from '../lib/types'
 
-vi.mock('../lib/fetcher', () => ({
-  fireRequest: vi.fn(() => Promise.resolve({
-    ok: true, status: 200, lat: 5, msg: 'OK', bodyText: null, reason: 'OK', badgeType: 'ok',
-  })),
-  makeSemaphore: () => ({ acquire: () => Promise.resolve(), release: () => {} }),
-}))
+vi.mock('../lib/fetcher', async importOriginal => {
+  const actual = await importOriginal<typeof import('../lib/fetcher')>()
+  return {
+    ...actual,
+    fireRequest: vi.fn(() => Promise.resolve({
+      ok: true, status: 200, lat: 5, msg: 'OK', bodyText: null, reason: 'OK', badgeType: 'ok',
+    })),
+  }
+})
 
 const addRun = vi.hoisted(() => vi.fn())
 vi.mock('./historyStore', () => ({
@@ -68,7 +71,7 @@ describe('testStore history save (#55)', () => {
       return Promise.resolve({ ok: true, status: 200, lat, msg: 'OK', bodyText: null, reason: 'OK', badgeType: 'ok' } as Awaited<ReturnType<typeof fireRequest>>)
     })
 
-    const fastCfg = { ...cfg, constRate: 3000 } as typeof cfg
+    const fastCfg = { ...cfg, constRate: 3000, concur: 500 } as typeof cfg
     useTestStore.getState().startTest(fastCfg, 'constant')
     await vi.advanceTimersByTimeAsync(1200)
 

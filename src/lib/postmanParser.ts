@@ -79,6 +79,17 @@ function resolveBody(body: PMBody | undefined): string | null {
   return null
 }
 
+// Resolve request/collection-level auth into concrete headers so it survives
+// both the curl rendering and the parsed PostmanRequest (see parsePostmanCollection).
+function resolveAuthHeaders(auth: PMRequest['auth']): Record<string, string> {
+  const headers: Record<string, string> = {}
+  if (auth?.type === 'bearer') {
+    const tok = auth.bearer?.find(b => b.key === 'token')?.value ?? ''
+    headers['Authorization'] = `Bearer ${tok}`
+  }
+  return headers
+}
+
 export function requestToCurl(req: PMRequest, _name: string): string {
   const method = (req.method ?? 'GET').toUpperCase()
   const url = resolveUrl(req.url)
@@ -87,9 +98,8 @@ export function requestToCurl(req: PMRequest, _name: string): string {
   const parts: string[] = [`curl -X ${method} '${url}'`]
 
   // Auth
-  if (req.auth?.type === 'bearer') {
-    const tok = req.auth.bearer?.find(b => b.key === 'token')?.value ?? ''
-    parts.push(`  -H 'Authorization: Bearer ${tok}'`)
+  for (const [key, value] of Object.entries(resolveAuthHeaders(req.auth))) {
+    parts.push(`  -H '${key}: ${value}'`)
   }
 
   // Headers
@@ -98,8 +108,9 @@ export function requestToCurl(req: PMRequest, _name: string): string {
     parts.push(`  -H '${h.key}: ${h.value}'`)
   }
 
-  // Body — resolveBody output is already fully encoded (urlencoded mode
-  // percent-encodes pairs itself), so plain -d is correct for every mode.
+  // Body — resolveBody already returns the exact wire format for both raw and
+  // urlencoded bodies. Emit it verbatim with -d; using --data-urlencode here
+  // would make curl re-encode an already-encoded body (double-encoding).
   const body = resolveBody(req.body)
   if (body) {
     const escaped = body.replace(/'/g, "'\\''")
@@ -129,11 +140,11 @@ export function parsePostmanCollection(json: unknown): PostmanRequest[] {
       for (const h of request.header ?? []) {
         if (!h.disabled) headers[h.key] = h.value
       }
-      // requestToCurl emits bearer auth as a header — keep the parsed request
-      // in sync so picking it doesn't silently drop authentication
-      if (request.auth?.type === 'bearer' && !headers['Authorization']) {
-        const tok = request.auth.bearer?.find(b => b.key === 'token')?.value ?? ''
-        headers['Authorization'] = `Bearer ${tok}`
+      // Bearer auth lives on request.auth, not request.header — apply it here so
+      // authenticated requests import with their Authorization header intact
+      // (was 401ing). An explicit Authorization header wins over the auth block.
+      for (const [k, v] of Object.entries(resolveAuthHeaders(request.auth))) {
+        if (!headers[k]) headers[k] = v
       }
       return {
         name,

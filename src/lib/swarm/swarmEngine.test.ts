@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { TestConfig } from '../types'
 
-vi.mock('../fetcher', () => ({
-  fireRequest: vi.fn(() => Promise.resolve({ ok: true, status: 200, lat: 5 })),
-  makeSemaphore: () => ({ acquire: () => Promise.resolve(), release: () => {} }),
-}))
+vi.mock('../fetcher', async importOriginal => {
+  const actual = await importOriginal<typeof import('../fetcher')>()
+  return { ...actual, fireRequest: vi.fn(() => Promise.resolve({ ok: true, status: 200, lat: 5 })) }
+})
 
 import { runSwarmSlice, type SwarmSampleWindow } from './swarmEngine'
 import { fireRequest } from '../fetcher'
@@ -15,7 +15,7 @@ const cfg = {
   parsed: { url: 'https://api.test/x', method: 'GET', headers: {}, body: null },
   constRate: 10, constRateUnit: 's',
   constDur: 1, constDurUnit: 's',
-  concur: 5, timeout: 1000,
+  concur: 50, timeout: 1000,
   scMin: 200, scMax: 299,
   latThreshOn: false, latThresh: 2000,
   bodyCheckOn: false, bodyCheck: '',

@@ -25,7 +25,7 @@ import { runSwarmSlice, type SwarmSampleWindow } from '../lib/swarm/swarmEngine'
 type OnWindow = (w: SwarmSampleWindow) => void
 
 function sampleWindow(sent: number): SwarmSampleWindow {
-  return { windowStartMs: 0, windowEndMs: 100, sent, ok: sent, fail: 0, codes: { 200: sent }, latencies: [50] }
+  return { windowStartMs: 0, windowEndMs: 100, sent, ok: sent, fail: 0, skipped: 0, codes: { 200: sent }, latencies: [50] }
 }
 
 const cfg = { constDur: 30, constDurUnit: 's' } as TestConfig
@@ -116,6 +116,7 @@ function makeAgg(latencies: number[]) {
     sent: latencies.length,
     ok: latencies.length - 1,
     fail: 1,
+    skipped: 0,
     codes: { 200: latencies.length - 1, 500: 1 },
     latencies: latencies.slice(-5000),
     stats,

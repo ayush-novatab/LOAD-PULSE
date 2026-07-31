@@ -4,19 +4,21 @@ import { hostSwarm, joinSwarm, randomRoomId, type HostHandle, type NodeHandle } 
 import { runSwarmSlice, SEQ_BLOCK_WIDTH, type SwarmSampleWindow, type ShareRef } from '../lib/swarm/swarmEngine'
 import { getDurationMs } from '../lib/loadPatterns'
 import { LatencyStats } from '../lib/percentile'
+import { pushTputPoint } from '../lib/tputPoints'
 import type { SwarmMessage, SwarmNodeState } from '../lib/swarm/types'
 
 interface AggStats {
   sent: number
   ok: number
   fail: number
+  skipped: number
   codes: Record<number, number>
   latencies: number[]
   /** streams over every sample — `latencies` is capped and display-only (#88) */
   stats: LatencyStats
 }
 
-const emptyAgg = (): AggStats => ({ sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], stats: new LatencyStats() })
+const emptyAgg = (): AggStats => ({ sent: 0, ok: 0, fail: 0, skipped: 0, codes: {}, latencies: [], stats: new LatencyStats() })
 
 interface SwarmState {
   role: 'idle' | 'host' | 'node'
@@ -76,6 +78,7 @@ function mergeWindow(agg: AggStats, w: SwarmSampleWindow): AggStats {
     sent: agg.sent + w.sent,
     ok: agg.ok + w.ok,
     fail: agg.fail + w.fail,
+    skipped: agg.skipped + w.skipped,
     codes,
     latencies: [...agg.latencies, ...w.latencies].slice(-5000),
     stats: agg.stats,
@@ -147,7 +150,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     hostShareRef = { value: share }
     hostAbort = new AbortController()
     void runSwarmSlice(cfg, pattern, hostShareRef, w => {
-      handleIncoming('host-self', { kind: 'sample', nodeId: 'host-self', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies }, set, get)
+      handleIncoming('host-self', { kind: 'sample', nodeId: 'host-self', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, skipped: w.skipped, codes: w.codes, latencies: w.latencies }, set, get)
     }, hostAbort.signal, 0).then(() => {
       set({ status: 'done', progressPct: 100 })
     }).catch(err => {
@@ -181,7 +184,7 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
           nodeShareRef = { value: msg.shareFraction }
           nodeAbort = new AbortController()
           void runSwarmSlice(msg.cfg, msg.pattern, nodeShareRef, w => {
-            nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies })
+            nodeHandle?.send({ kind: 'sample', nodeId: 'me', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, skipped: w.skipped, codes: w.codes, latencies: w.latencies })
             set(s => ({ agg: mergeWindow(s.agg, w) }))
           }, nodeAbort.signal, msg.seqBase).then(() => {
             // if we were kicked (status already 'error'), don't flip back to 'done'
@@ -289,7 +292,7 @@ function handleIncoming(
     const sec = Math.floor((Date.now() - startedAt) / 1000)
     let tputPts = s.tputPts
     if (sec !== lastTputSec) {
-      if (lastTputSec >= 0) tputPts = [...tputPts, { t: lastTputSec * 1000, rps: tputAccum }]
+      if (lastTputSec >= 0) tputPts = pushTputPoint(tputPts, { t: lastTputSec * 1000, rps: tputAccum })
       lastTputSec = sec
       tputAccum = msg.sent
     } else {
@@ -306,6 +309,7 @@ export function swarmSummary(agg: AggStats) {
     sent: agg.sent,
     ok: agg.ok,
     fail: agg.fail,
+    skipped: agg.skipped,
     successRate: agg.sent ? ((agg.ok / agg.sent) * 100).toFixed(1) : '0.0',
     avg: agg.stats.avg(),
     p95: agg.stats.percentile(95),

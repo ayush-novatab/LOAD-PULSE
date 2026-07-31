@@ -1,20 +1,28 @@
 import type { ParsedCurl } from './types'
 
+// Split a curl command into arguments the way a POSIX shell would: one token
+// per *word*, where a word is any run of adjacent quoted, escaped and bare
+// characters uninterrupted by unquoted whitespace. Accumulating across segments
+// (rather than emitting a token per quoted span) is what lets the '\'' idiom
+// that requestToCurl emits for a body containing ' — e.g. 'O'\''Brien' — collapse
+// back into the single argument O'Brien instead of being split and mangled.
 function tokenize(s: string): string[] {
   const tokens: string[] = []
   let i = 0
   while (i < s.length) {
     while (i < s.length && /\s/.test(s[i])) i++
     if (i >= s.length) break
-    // A word runs until unquoted whitespace; adjacent quoted and unquoted
-    // segments concatenate ('name=O'\''Brien' is one word), as in a shell.
     let buf = ''
     while (i < s.length && !/\s/.test(s[i])) {
-      if (s[i] === "'") {
+      const c = s[i]
+      if (c === "'") {
+        // Single quotes are literal in POSIX: everything up to the next ' is
+        // taken verbatim, backslashes included.
         i++
         while (i < s.length && s[i] !== "'") buf += s[i++]
         i++
-      } else if (s[i] === '"') {
+      } else if (c === '"') {
+        // Double quotes allow backslash escapes.
         i++
         while (i < s.length && s[i] !== '"') {
           if (s[i] === '\\' && i + 1 < s.length) { i++; buf += s[i] }
@@ -22,11 +30,13 @@ function tokenize(s: string): string[] {
           i++
         }
         i++
-      } else if (s[i] === '\\' && i + 1 < s.length) {
+      } else if (c === '\\' && i + 1 < s.length) {
+        // Backslash outside quotes escapes the next character.
         i++
         buf += s[i++]
       } else {
-        buf += s[i++]
+        buf += c
+        i++
       }
     }
     tokens.push(buf)
@@ -51,7 +61,7 @@ export function parseCurl(raw: string): ParsedCurl {
       const h = tokens[++ti] || ''
       const c = h.indexOf(':')
       if (c > -1) headers[h.slice(0, c).trim()] = h.slice(c + 1).trim()
-    } else if (['-d', '--data', '--data-raw', '--data-binary', '--data-ascii'].includes(t)) {
+    } else if (['-d', '--data', '--data-raw', '--data-binary', '--data-ascii', '--data-urlencode'].includes(t)) {
       body = tokens[++ti] || ''
     } else if (t === '--json') {
       body = tokens[++ti] || ''
