@@ -59,10 +59,12 @@ export async function runChain(steps: ChainStep[], timeout = 10000): Promise<Cha
       try { bodyText = await res.text() } catch { /* ignore */ }
 
       let bodyJson: unknown = null
-      try { bodyJson = JSON.parse(bodyText) } catch { /* ignore */ }
+      let bodyParsed = false
+      try { bodyJson = JSON.parse(bodyText); bodyParsed = true } catch { /* ignore */ }
 
       for (const ex of step.extractors) {
-        if (ex.source === 'body' && bodyJson) {
+        // Guard on parse success, not truthiness — a body of 0/false/"" is valid JSON.
+        if (ex.source === 'body' && bodyParsed) {
           const val = await getNestedValue(bodyJson, ex.path)
           if (val !== null) vars[ex.varName] = val
         } else if (ex.source === 'header') {

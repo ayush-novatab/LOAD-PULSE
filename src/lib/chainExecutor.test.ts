@@ -41,6 +41,12 @@ describe('runChain', () => {
     expect(vars).toEqual({ t: 'tok' })
   })
 
+  it('extracts from a falsy-but-valid JSON body (#67)', async () => {
+    mockFetch(() => jsonResponse('0'))
+    const vars = await runChain([step([{ varName: 'n', source: 'body', path: '$' }])])
+    expect(vars).toEqual({ n: '0' })
+  })
+
   it('aborts a stalled body read via the step timeout instead of hanging (#49)', async () => {
     mockFetch((_url, init) => Promise.resolve({
       headers: new Headers(),
