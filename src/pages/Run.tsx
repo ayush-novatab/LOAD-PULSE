@@ -174,43 +174,43 @@ export default function Run() {
           {pattern === 'constant' && (
             <div className="form-grid-2">
               <div className="form-group">
-                <label className="form-label">Rate</label>
+                <label className="form-label" htmlFor="const-rate">Rate</label>
                 <div className="input-unit">
-                  <input type="number" min={1} value={form.constRate} onChange={ni('constRate')} />
-                  <select value={form.constRateUnit} onChange={ns('constRateUnit')}><option value="s">/ s</option><option value="m">/ min</option></select>
+                  <input id="const-rate" type="number" min={1} value={form.constRate} onChange={ni('constRate')} />
+                  <select aria-label="Rate unit" value={form.constRateUnit} onChange={ns('constRateUnit')}><option value="s">/ s</option><option value="m">/ min</option></select>
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Duration</label>
+                <label className="form-label" htmlFor="const-dur">Duration</label>
                 <div className="input-unit">
-                  <input type="number" min={1} value={form.constDur} onChange={ni('constDur')} />
-                  <select value={form.constDurUnit} onChange={ns('constDurUnit')}><option value="s">s</option><option value="m">min</option></select>
+                  <input id="const-dur" type="number" min={1} value={form.constDur} onChange={ni('constDur')} />
+                  <select aria-label="Duration unit" value={form.constDurUnit} onChange={ns('constDurUnit')}><option value="s">s</option><option value="m">min</option></select>
                 </div>
               </div>
               <div className="form-group">
-                <label className="form-label">Concurrency</label>
-                <input type="number" min={1} max={500} value={form.concur} onChange={ni('concur')} />
+                <label className="form-label" htmlFor="const-concur">Concurrency</label>
+                <input id="const-concur" type="number" min={1} max={500} value={form.concur} onChange={ni('concur')} />
               </div>
               <div className="form-group">
-                <label className="form-label">Timeout (ms)</label>
-                <input type="number" min={100} value={form.timeout} onChange={ni('timeout')} />
+                <label className="form-label" htmlFor="const-timeout">Timeout (ms)</label>
+                <input id="const-timeout" type="number" min={100} value={form.timeout} onChange={ni('timeout')} />
               </div>
             </div>
           )}
 
           {pattern === 'ramp' && (
             <div className="form-grid-2">
-              <div className="form-group"><label className="form-label">Start (req/s)</label><input type="number" min={0} value={form.rampStart} onChange={ni('rampStart')} /></div>
-              <div className="form-group"><label className="form-label">End (req/s)</label><input type="number" min={1} value={form.rampEnd} onChange={ni('rampEnd')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="ramp-start">Start (req/s)</label><input id="ramp-start" type="number" min={0} value={form.rampStart} onChange={ni('rampStart')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="ramp-end">End (req/s)</label><input id="ramp-end" type="number" min={1} value={form.rampEnd} onChange={ni('rampEnd')} /></div>
               <div className="form-group">
-                <label className="form-label">Duration</label>
+                <label className="form-label" htmlFor="ramp-dur">Duration</label>
                 <div className="input-unit">
-                  <input type="number" min={1} value={form.rampDur} onChange={ni('rampDur')} />
-                  <select value={form.rampDurUnit} onChange={ns('rampDurUnit')}><option value="s">s</option><option value="m">min</option></select>
+                  <input id="ramp-dur" type="number" min={1} value={form.rampDur} onChange={ni('rampDur')} />
+                  <select aria-label="Duration unit" value={form.rampDurUnit} onChange={ns('rampDurUnit')}><option value="s">s</option><option value="m">min</option></select>
                 </div>
               </div>
-              <div className="form-group"><label className="form-label">Concurrency</label><input type="number" min={1} value={form.rampConcur} onChange={ni('rampConcur')} /></div>
-              <div className="form-group"><label className="form-label">Timeout (ms)</label><input type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="ramp-concur">Concurrency</label><input id="ramp-concur" type="number" min={1} value={form.rampConcur} onChange={ni('rampConcur')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="ramp-timeout">Timeout (ms)</label><input id="ramp-timeout" type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
             </div>
           )}
 
@@ -224,27 +224,27 @@ export default function Run() {
 
           {pattern === 'spike' && (
             <div className="form-grid-2">
-              <div className="form-group"><label className="form-label">Base (req/s)</label><input type="number" min={0} value={form.spikeBase} onChange={ni('spikeBase')} /></div>
-              <div className="form-group"><label className="form-label">Spike (req/s)</label><input type="number" min={1} value={form.spikeRate} onChange={ni('spikeRate')} /></div>
-              <div className="form-group"><label className="form-label">Total dur (s)</label><input type="number" min={10} value={form.spikeDur} onChange={ni('spikeDur')} /></div>
-              <div className="form-group"><label className="form-label">Burst dur (s)</label><input type="number" min={1} value={form.spikeBurst} onChange={ni('spikeBurst')} /></div>
-              <div className="form-group"><label className="form-label">Timeout (ms)</label><input type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
-              <div className="form-group"><label className="form-label">Concurrency</label><input type="number" min={1} value={form.concur} onChange={ni('concur')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-base">Base (req/s)</label><input id="spike-base" type="number" min={0} value={form.spikeBase} onChange={ni('spikeBase')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-rate">Spike (req/s)</label><input id="spike-rate" type="number" min={1} value={form.spikeRate} onChange={ni('spikeRate')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-dur">Total dur (s)</label><input id="spike-dur" type="number" min={10} value={form.spikeDur} onChange={ni('spikeDur')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-burst">Burst dur (s)</label><input id="spike-burst" type="number" min={1} value={form.spikeBurst} onChange={ni('spikeBurst')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-timeout">Timeout (ms)</label><input id="spike-timeout" type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="spike-concur">Concurrency</label><input id="spike-concur" type="number" min={1} value={form.concur} onChange={ni('concur')} /></div>
             </div>
           )}
 
           {pattern === 'soak' && (
             <div className="form-grid-2">
-              <div className="form-group"><label className="form-label">Rate (req/s)</label><input type="number" min={1} value={form.soakRate} onChange={ni('soakRate')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="soak-rate">Rate (req/s)</label><input id="soak-rate" type="number" min={1} value={form.soakRate} onChange={ni('soakRate')} /></div>
               <div className="form-group">
-                <label className="form-label">Duration</label>
+                <label className="form-label" htmlFor="soak-dur">Duration</label>
                 <div className="input-unit">
-                  <input type="number" min={1} value={form.soakDur} onChange={ni('soakDur')} />
-                  <select value={form.soakDurUnit} onChange={ns('soakDurUnit')}><option value="s">s</option><option value="m">min</option></select>
+                  <input id="soak-dur" type="number" min={1} value={form.soakDur} onChange={ni('soakDur')} />
+                  <select aria-label="Duration unit" value={form.soakDurUnit} onChange={ns('soakDurUnit')}><option value="s">s</option><option value="m">min</option></select>
                 </div>
               </div>
-              <div className="form-group"><label className="form-label">Concurrency</label><input type="number" min={1} value={form.soakConcur} onChange={ni('soakConcur')} /></div>
-              <div className="form-group"><label className="form-label">Timeout (ms)</label><input type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="soak-concur">Concurrency</label><input id="soak-concur" type="number" min={1} value={form.soakConcur} onChange={ni('soakConcur')} /></div>
+              <div className="form-group"><label className="form-label" htmlFor="soak-timeout">Timeout (ms)</label><input id="soak-timeout" type="number" min={100} value={form.timeout} onChange={ni('timeout')} /></div>
             </div>
           )}
 
@@ -255,11 +255,13 @@ export default function Run() {
           <button
             className="card-title criteria-toggle"
             onClick={() => setShowCriteria(s => !s)}
+            aria-expanded={showCriteria}
+            aria-controls="criteria-panel"
           >
-            Success Criteria <span className="criteria-chevron">{showCriteria ? '▲' : '▼'}</span>
+            Success Criteria <span className="criteria-chevron" aria-hidden="true">{showCriteria ? '▲' : '▼'}</span>
           </button>
           {showCriteria && (
-            <div style={{ marginTop: 12 }}>
+            <div id="criteria-panel" style={{ marginTop: 12 }}>
               <SuccessCriteria cfg={form} set={p => patch(p as Partial<FormState>)} />
             </div>
           )}
@@ -280,8 +282,13 @@ export default function Run() {
 
       {/* ── Request Chaining ── */}
       <div className="card">
-        <button className="card-title criteria-toggle" onClick={() => setShowChain(s => !s)}>
-          Request Chaining <span className="criteria-chevron">{showChain ? '▲' : '▼'}</span>
+        <button
+          className="card-title criteria-toggle"
+          onClick={() => setShowChain(s => !s)}
+          aria-expanded={showChain}
+          aria-controls="chain-panel"
+        >
+          Request Chaining <span className="criteria-chevron" aria-hidden="true">{showChain ? '▲' : '▼'}</span>
         </button>
         {!showChain && chainSteps.length > 0 && (
           <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text3)' }}>
@@ -290,7 +297,7 @@ export default function Run() {
           </div>
         )}
         {showChain && (
-          <div style={{ marginTop: 12 }}>
+          <div id="chain-panel" style={{ marginTop: 12 }}>
             <ChainBuilder steps={chainSteps} onChange={setChainSteps} />
             {chainStatus === 'running' && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--accent)' }}>⏳ Running chain steps…</div>

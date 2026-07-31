@@ -54,6 +54,7 @@ export default function ChainBuilder({ steps, onChange }: Props) {
             </span>
             <button
               onClick={() => removeStep(step.id)}
+              aria-label={si === 0 ? 'Remove setup request' : `Remove chain step ${si + 1}`}
               style={{ marginLeft: 'auto', background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 16 }}
             >×</button>
           </div>
@@ -61,6 +62,7 @@ export default function ChainBuilder({ steps, onChange }: Props) {
           <textarea
             value={step.curl}
             onChange={e => updateStep(step.id, { curl: e.target.value })}
+            aria-label={si === 0 ? 'Setup request cURL command' : `Chain step ${si + 1} cURL command`}
             placeholder={si === 0
               ? "curl -X POST https://api.example.com/auth -d '{\"user\":\"admin\",\"pass\":\"secret\"}'"
               : 'Use {{chain.token}} in your main cURL command'}
@@ -83,12 +85,14 @@ export default function ChainBuilder({ steps, onChange }: Props) {
                   value={ex.varName}
                   onChange={e => updateExtractor(step.id, ei, { varName: e.target.value })}
                   placeholder="token"
+                  aria-label="Variable name"
                   style={{ width: 80, fontSize: 11, padding: '3px 7px' }}
                 />
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>from</span>
                 <select
                   value={ex.source}
                   onChange={e => updateExtractor(step.id, ei, { source: e.target.value as 'body' | 'header' })}
+                  aria-label="Extract from"
                   style={{ fontSize: 11, padding: '3px 6px' }}
                 >
                   <option value="body">body</option>
@@ -98,11 +102,13 @@ export default function ChainBuilder({ steps, onChange }: Props) {
                 <input
                   value={ex.path}
                   onChange={e => updateExtractor(step.id, ei, { path: e.target.value })}
+                  aria-label={ex.source === 'body' ? 'Body extraction path' : 'Header name'}
                   placeholder={ex.source === 'body' ? 'data.token' : 'Authorization'}
                   style={{ flex: 1, minWidth: 80, fontSize: 11, padding: '3px 7px' }}
                 />
                 <button
                   onClick={() => removeExtractor(step.id, ei)}
+                  aria-label={`Remove extracted variable ${ei + 1}`}
                   style={{ background: 'none', border: 'none', color: 'var(--text3)', cursor: 'pointer', fontSize: 14 }}
                 >×</button>
               </div>

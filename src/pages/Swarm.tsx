@@ -72,8 +72,9 @@ export default function Swarm() {
               <PatternPicker value={pattern} onChange={setPattern} />
             </div>
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Passcode (optional)</label>
+              <label className="form-label" htmlFor="host-pass">Passcode (optional)</label>
               <input
+                id="host-pass"
                 type="text"
                 value={hostPass}
                 onChange={e => setHostPass(e.target.value)}
@@ -89,8 +90,9 @@ export default function Swarm() {
           <div className="card config-criteria">
             <div className="card-title">Join a swarm</div>
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Room code</label>
+              <label className="form-label" htmlFor="join-code">Room code</label>
               <input
+                id="join-code"
                 type="text"
                 value={joinCode}
                 onChange={e => setJoinCode(e.target.value)}
@@ -99,8 +101,9 @@ export default function Swarm() {
               />
             </div>
             <div className="form-group" style={{ marginTop: 12 }}>
-              <label className="form-label">Passcode (if required)</label>
+              <label className="form-label" htmlFor="join-pass">Passcode (if required)</label>
               <input
+                id="join-pass"
                 type="text"
                 value={joinPass}
                 onChange={e => setJoinPass(e.target.value)}

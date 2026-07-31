@@ -53,6 +53,7 @@ export default function CurlInput({ onParsed }: Props) {
       <div className="card-title">cURL Command</div>
       <textarea
         className="curl-area w-full"
+        aria-label="cURL command"
         placeholder={'curl https://api.example.com/endpoint \\\n  -H "Authorization: Bearer {{token}}" \\\n  -d \'{"key":"{{uuid}}"}\''}
         value={raw}
         onChange={e => handleChange(e.target.value)}

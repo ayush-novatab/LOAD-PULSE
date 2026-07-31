@@ -55,7 +55,8 @@ describe('runChain', () => {
 
     expect(calls).toHaveLength(2)
     expect(calls[1].url).toBe('https://api.test/abc/me')
-    expect((calls[1].init?.headers as Record<string, string>)['Authorization']).toBe('Bearer abc')
+    const headers = (calls[1].init?.headers ?? {}) as Record<string, string>
+    expect(headers['Authorization']).toBe('Bearer abc')
   })
 
   it('rejects on an unparseable chain step instead of silently skipping it (#81)', async () => {

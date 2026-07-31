@@ -24,6 +24,7 @@ export default function PatternPicker({ value, onChange }: Props) {
             className={'pattern-tab' + (value === p.id ? ' active' : '')}
             onClick={() => onChange(p.id)}
             title={p.desc}
+            aria-pressed={value === p.id}
           >
             {p.label}
           </button>

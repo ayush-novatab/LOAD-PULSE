@@ -40,7 +40,7 @@ function InstallBanner() {
     }}>
       <span>⚡ Install LoadPulse as an app</span>
       <button className="btn btn-primary btn-sm" onClick={() => { prompt.prompt(); setDismissed(true) }}>Install</button>
-      <button className="btn btn-ghost btn-sm" onClick={() => setDismissed(true)}>✕</button>
+      <button className="btn btn-ghost btn-sm" onClick={() => setDismissed(true)} aria-label="Dismiss install banner">✕</button>
     </div>
   )
 }
@@ -98,6 +98,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             className="btn btn-ghost btn-sm"
             onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
             title="Toggle theme"
+            aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
           >
             {theme === 'dark' ? '☀️' : '🌙'}
           </button>
