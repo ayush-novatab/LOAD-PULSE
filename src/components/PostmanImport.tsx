@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { parsePostmanCollection } from '../lib/postmanParser'
 import type { PostmanRequest } from '../lib/postmanParser'
 
@@ -13,6 +13,43 @@ export default function PostmanImport({ onSelect, onClose }: Props) {
   const [query, setQuery] = useState('')
   const [loaded, setLoaded] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Modal keyboard contract: focus moves into the dialog on open, Tab cycles
+  // within it, Escape closes, and focus returns to the trigger on close.
+  useEffect(() => {
+    const trigger = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
+
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        e.stopPropagation() // don't reach the Run page's Escape-stops-test handler
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const dialog = dialogRef.current
+      if (!dialog) return
+      const focusables = [...dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      )].filter(el => el.offsetWidth > 0 || el.offsetHeight > 0)
+      if (focusables.length === 0) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (!dialog.contains(document.activeElement)) {
+        e.preventDefault(); first.focus()
+      } else if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault(); last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault(); first.focus()
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      trigger?.focus()
+    }
+  }, [onClose])
 
   function processJson(text: string) {
     try {
@@ -75,14 +112,20 @@ export default function PostmanImport({ onSelect, onClose }: Props) {
       position: 'fixed', inset: 0, zIndex: 200,
       background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center',
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{
-        background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10,
-        width: 'min(640px, 96vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
-        padding: 20, gap: 14,
-      }}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="postman-import-title"
+        tabIndex={-1}
+        style={{
+          background: 'var(--bg1)', border: '1px solid var(--border)', borderRadius: 10,
+          width: 'min(640px, 96vw)', maxHeight: '80vh', display: 'flex', flexDirection: 'column',
+          padding: 20, gap: 14,
+        }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ fontWeight: 600, fontSize: 15 }}>📦 Import from Postman</div>
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+          <div id="postman-import-title" style={{ fontWeight: 600, fontSize: 15 }}><span aria-hidden="true">📦</span> Import from Postman</div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose} aria-label="Close dialog">✕</button>
         </div>
 
         {!loaded ? (
@@ -98,10 +141,11 @@ export default function PostmanImport({ onSelect, onClose }: Props) {
               className="curl-area"
               style={{ height: 120, fontFamily: 'var(--font-mono)', fontSize: 11 }}
               placeholder="Paste Postman Collection JSON here…"
+              aria-label="Postman collection JSON"
               onPaste={handlePaste}
               onChange={() => {}}
             />
-            {error && <div className="curl-error">⚠ {error}</div>}
+            {error && <div className="curl-error" role="alert">⚠ {error}</div>}
             <div style={{ fontSize: 11, color: 'var(--text3)' }}>
               Export a collection from Postman: Collections → ··· → Export → Collection v2.1
             </div>
@@ -112,6 +156,7 @@ export default function PostmanImport({ onSelect, onClose }: Props) {
               <input
                 type="text"
                 placeholder="Search requests…"
+                aria-label="Search requests"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
                 style={{
