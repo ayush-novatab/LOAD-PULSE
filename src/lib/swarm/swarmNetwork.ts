@@ -9,16 +9,40 @@ const ROOM_PREFIX = 'loadpulse-swarm-'
  * openrelay.metered.ca is a free public TURN service (shared demo credentials,
  * rate-limited) — good enough to unblock most restrictive networks without
  * requiring LoadPulse to run or pay for its own relay infrastructure.
+ *
+ * DEMO-ONLY DEFAULTS: the public TURN credentials and PeerJS cloud broker are
+ * fine for trying LoadPulse out, but room ids and connection metadata transit
+ * third-party services. For production, point the swarm at your own infra via
+ * build-time env vars:
+ *   VITE_TURN_URL / VITE_TURN_USERNAME / VITE_TURN_CREDENTIAL  — your TURN relay
+ *   VITE_PEERJS_HOST / VITE_PEERJS_PORT / VITE_PEERJS_PATH      — your PeerJS server
  */
-const ICE_SERVERS: RTCIceServer[] = [
-  { urls: 'stun:stun.l.google.com:19302' },
-  { urls: 'stun:openrelay.metered.ca:80' },
-  { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-  { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
-]
+const env = import.meta.env ?? {}
 
-const PEER_OPTIONS: PeerOptions = { config: { iceServers: ICE_SERVERS } }
+const ICE_SERVERS: RTCIceServer[] = env.VITE_TURN_URL
+  ? [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: env.VITE_TURN_URL, username: env.VITE_TURN_USERNAME ?? '', credential: env.VITE_TURN_CREDENTIAL ?? '' },
+    ]
+  : [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:openrelay.metered.ca:80' },
+      { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+      { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+    ]
+
+const PEER_OPTIONS: PeerOptions = {
+  ...(env.VITE_PEERJS_HOST
+    ? {
+        host: env.VITE_PEERJS_HOST,
+        port: Number(env.VITE_PEERJS_PORT ?? 443),
+        path: env.VITE_PEERJS_PATH ?? '/',
+        secure: true,
+      }
+    : {}),
+  config: { iceServers: ICE_SERVERS },
+}
 
 /** How long to wait for the broker / host connection before giving up — a stalled network otherwise leaves the user on 'waiting' forever. */
 const CONNECT_TIMEOUT_MS = 15_000
