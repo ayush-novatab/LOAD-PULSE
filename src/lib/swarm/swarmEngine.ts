@@ -60,7 +60,10 @@ export function runSwarmSlice(
     const startTime = Date.now()
 
     let accum = 0
-    let stopped = false
+    let stopped = false   // hard stop (abort): drop everything still in flight
+    let draining = false  // natural end: no new dispatches, in-flight results still count
+    let resolved = false
+    let inFlight = 0
     let win: SwarmSampleWindow = { sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], windowStartMs: 0, windowEndMs: 0 }
 
     function flushWindow() {
@@ -70,11 +73,23 @@ export function runSwarmSlice(
       win = { sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], windowStartMs: el, windowEndMs: el }
     }
 
-    async function fireOne() {
-      if (stopped) return
-      await sem.acquire()
-      if (stopped) { sem.release(); return }
+    function settle() {
+      if (resolved) return
+      resolved = true
+      flushWindow()
+      resolve()
+    }
 
+    function maybeFinishDrain() {
+      if (draining && inFlight === 0) settle()
+    }
+
+    async function fireOne() {
+      if (stopped || draining) return
+      await sem.acquire()
+      if (stopped || draining) { sem.release(); return }
+
+      inFlight++
       const result = await fireRequest(
         cfg.parsed, timeout,
         cfg.scMin, cfg.scMax,
@@ -83,6 +98,7 @@ export function runSwarmSlice(
         false, signal, varSpace,
       )
       sem.release()
+      inFlight--
       if (stopped) return
 
       win.sent++
@@ -90,6 +106,7 @@ export function runSwarmSlice(
       else win.fail++
       if (result.status !== null) win.codes[result.status] = (win.codes[result.status] || 0) + 1
       win.latencies.push(result.lat)
+      maybeFinishDrain()
     }
 
     // accum starts at 0 — the tick at t=totalMs fires before the finish timer
@@ -106,15 +123,22 @@ export function runSwarmSlice(
     const reportH = setInterval(flushWindow, REPORT_INTERVAL_MS)
 
     function finish() {
+      if (stopped || draining) return
+      draining = true
+      clearInterval(tickH)
+      clearInterval(reportH)
+      maybeFinishDrain()
+    }
+
+    function hardStop() {
       if (stopped) return
       stopped = true
       clearInterval(tickH)
       clearInterval(reportH)
-      flushWindow()
-      resolve()
+      settle()
     }
 
     const timerH = setTimeout(finish, totalMs)
-    signal.addEventListener('abort', () => { clearTimeout(timerH); finish() })
+    signal.addEventListener('abort', () => { clearTimeout(timerH); hardStop() })
   })
 }
