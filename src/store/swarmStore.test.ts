@@ -18,7 +18,8 @@ vi.mock('../lib/swarm/swarmEngine', () => ({
   runSwarmSlice: vi.fn(() => new Promise<void>((resolve, reject) => { slices.push({ resolve, reject }) })),
 }))
 
-import { useSwarmStore } from './swarmStore'
+import { useSwarmStore, swarmSummary, buildSwarmReport } from './swarmStore'
+import { LatencyStats } from '../lib/percentile'
 import { runSwarmSlice, type SwarmSampleWindow } from '../lib/swarm/swarmEngine'
 
 type OnWindow = (w: SwarmSampleWindow) => void
@@ -100,5 +101,64 @@ describe('swarmStore host ui timer (#54)', () => {
     const onWindow2 = vi.mocked(runSwarmSlice).mock.calls[1][3] as OnWindow
     onWindow2(sampleWindow(3))
     expect(useSwarmStore.getState().tputPts).toEqual([])
+  })
+})
+
+const reportCfg = {
+  ...cfg,
+  parsed: { url: 'https://api.test/x', method: 'GET', headers: {}, body: null },
+} as TestConfig
+
+function makeAgg(latencies: number[]) {
+  const stats = new LatencyStats()
+  for (const l of latencies) stats.add(l)
+  return {
+    sent: latencies.length,
+    ok: latencies.length - 1,
+    fail: 1,
+    codes: { 200: latencies.length - 1, 500: 1 },
+    latencies: latencies.slice(-5000),
+    stats,
+  }
+}
+
+describe('swarmSummary / buildSwarmReport aggregation (#91)', () => {
+  it('summarizes counts, success rate and percentiles', () => {
+    const agg = makeAgg([10, 20, 30, 40, 1000])
+    const s = swarmSummary(agg)
+    expect(s.sent).toBe(5)
+    expect(s.successRate).toBe('80.0')
+    expect(s.avg).toBe(Math.round((10 + 20 + 30 + 40 + 1000) / 5))
+    expect(s.p95).toBe(1000)
+  })
+
+  it('computes summary stats over all samples, beyond the 5000-entry display cap (#88)', () => {
+    const lats = [...Array(3000).fill(1000), ...Array(3000).fill(10)]
+    const s = swarmSummary(makeAgg(lats))
+    // capped-array math saw only the last 5000 samples (avg 406); true avg is 505
+    expect(s.avg).toBe(505)
+  })
+
+  it('buildSwarmReport mirrors the summary into report meta', () => {
+    const state = {
+      role: 'host', status: 'done', totalMs: 10_000,
+      agg: makeAgg([10, 20, 30, 40, 1000]),
+      nodes: {
+        'host-self': { nodeId: 'host-self', connected: true, sent: 3, ok: 3, fail: 0, lat: [] },
+        'node-1': { nodeId: 'node-1', connected: true, sent: 2, ok: 1, fail: 1, lat: [] },
+      },
+    }
+    const report = buildSwarmReport(state as never, reportCfg, 'constant')!
+    expect(report.meta.total).toBe(5)
+    expect(report.meta.maxLatMs).toBe(1000)
+    expect(report.meta.nodeCount).toBe(2)
+    expect(report.nodes).toHaveLength(2)
+    expect(report.statusCodes[500]).toBe(1)
+  })
+
+  it('buildSwarmReport returns null for a node or an idle host', () => {
+    const base = { agg: makeAgg([10]), nodes: {}, totalMs: 0 }
+    expect(buildSwarmReport({ ...base, role: 'node', status: 'done' } as never, reportCfg, 'constant')).toBeNull()
+    expect(buildSwarmReport({ ...base, role: 'host', status: 'idle' } as never, reportCfg, 'constant')).toBeNull()
   })
 })
