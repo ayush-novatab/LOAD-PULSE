@@ -140,8 +140,10 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     }, hostAbort.signal, 0).then(() => {
       set({ status: 'done', progressPct: 100 })
       hostShareRef = null
+      if (uiTimer) { clearInterval(uiTimer); uiTimer = null }
     })
 
+    if (uiTimer) clearInterval(uiTimer)
     uiTimer = setInterval(() => {
       const el = Date.now() - startedAt
       set({ progressPct: Math.min(100, (el / totalMs) * 100) })
