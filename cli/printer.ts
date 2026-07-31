@@ -147,10 +147,11 @@ export function printGates(gateResults: GateResult[], quiet: boolean): void {
     const op      = g.direction === 'gte' ? '≥' : '≤'
     const unit    = g.label.includes('latency') ? 'ms' : '%'
     const passing = g.passed ? green('✓') : red('✗')
-    const thresh  = dim(`${op} ${g.threshold}${unit}`)
+    // pad the raw text before dimming — ANSI escapes count toward padEnd width
+    const thresh  = `${op} ${g.threshold}${unit}`
     const actual  = `${g.actual}${unit}`
     const status  = g.passed ? green('PASS') : red('FAIL')
-    process.stderr.write(`  ${passing}  ${g.label.padEnd(14)} ${bold(actual.padStart(8))}  ${thresh.padEnd(16)}  ${status}\n`)
+    process.stderr.write(`  ${passing}  ${g.label.padEnd(14)} ${bold(actual.padStart(8))}  ${dim(thresh.padEnd(16))}  ${status}\n`)
   }
 }
 
