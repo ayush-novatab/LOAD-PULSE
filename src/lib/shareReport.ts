@@ -32,11 +32,32 @@ async function gzip(str: string): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
-async function gunzip(bytes: Uint8Array): Promise<string> {
+// The token comes from an attacker-controllable URL fragment: cap what we'll
+// even look at, and cap what gzip may inflate to (decompression bomb).
+const MAX_TOKEN_CHARS = 2_000_000
+const MAX_DECOMPRESSED_BYTES = 32 * 1024 * 1024
+
+async function gunzip(bytes: Uint8Array, maxBytes = MAX_DECOMPRESSED_BYTES): Promise<string> {
   // `bytes as BlobPart`: a Uint8Array is a valid BlobPart at runtime; the cast
   // sidesteps TS 6's Uint8Array<ArrayBufferLike> vs BlobPart<ArrayBuffer> generic mismatch.
   const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'))
-  return new Response(stream).text()
+  const reader = stream.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > maxBytes) {
+      await reader.cancel()
+      throw new Error('Decompressed payload too large')
+    }
+    chunks.push(value)
+  }
+  const out = new Uint8Array(total)
+  let off = 0
+  for (const c of chunks) { out.set(c, off); off += c.byteLength }
+  return new TextDecoder().decode(out)
 }
 
 export async function encodeReport(payload: SharePayload): Promise<string> {
@@ -45,6 +66,8 @@ export async function encodeReport(payload: SharePayload): Promise<string> {
 }
 
 export async function decodeReport(token: string): Promise<SharePayload | null> {
+  if (token.length > MAX_TOKEN_CHARS) return null
+
   // Current format: URL-safe Base64 of a gzipped SharePayload.
   try {
     const json = await gunzip(base64UrlToBytes(token))

@@ -46,6 +46,31 @@ describe('shareReport', () => {
     expect(await decodeReport('!!!not-valid!!!')).toBeNull()
   })
 
+  it('rejects a token longer than the sanity cap even when otherwise valid (#72)', async () => {
+    // incompressible content → a valid token far past any legitimate share size
+    let rnd = ''
+    while (rnd.length < 3 * 1024 * 1024) rnd += Math.random().toString(36).slice(2)
+    const payload = makePayload(0)
+    payload.report.failures = { blob: { count: 1, type: 'h5', status: 500, bodies: [rnd] } }
+
+    const token = await encodeReport(payload)
+    expect(token.length).toBeGreaterThan(2_000_000)
+    expect(await decodeReport(token)).toBeNull()
+  })
+
+  it('aborts a decompression bomb instead of inflating it fully (#72)', async () => {
+    // a valid SharePayload whose JSON inflates to ~40MB from a tiny token
+    const bombJson = '{"report":{"bomb":"' + '0'.repeat(40 * 1024 * 1024) + '"}}'
+    const stream = new Blob([bombJson]).stream().pipeThrough(new CompressionStream('gzip'))
+    const gz = new Uint8Array(await new Response(stream).arrayBuffer())
+    let bin = ''
+    for (let i = 0; i < gz.length; i += 0x8000) bin += String.fromCharCode(...gz.subarray(i, i + 0x8000))
+    const token = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+    expect(token.length).toBeLessThan(200_000)
+
+    expect(await decodeReport(token)).toBeNull()
+  })
+
   it('still decodes a legacy plain-Base64 report (no series) into a payload', async () => {
     const report = makeReport()
     const legacy = btoa(unescape(encodeURIComponent(JSON.stringify(report))))
