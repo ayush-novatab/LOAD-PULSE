@@ -129,6 +129,12 @@ export function parsePostmanCollection(json: unknown): PostmanRequest[] {
       for (const h of request.header ?? []) {
         if (!h.disabled) headers[h.key] = h.value
       }
+      // requestToCurl emits bearer auth as a header — keep the parsed request
+      // in sync so picking it doesn't silently drop authentication
+      if (request.auth?.type === 'bearer' && !headers['Authorization']) {
+        const tok = request.auth.bearer?.find(b => b.key === 'token')?.value ?? ''
+        headers['Authorization'] = `Bearer ${tok}`
+      }
       return {
         name,
         method: (request.method ?? 'GET').toUpperCase(),

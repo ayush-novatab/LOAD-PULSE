@@ -13,6 +13,39 @@ describe('parsePostmanCollection', () => {
     expect(reqs[0].folder).toBe('auth')
   })
 
+  it('carries bearer auth into the parsed request headers (#90)', () => {
+    const col = {
+      info: { schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [{
+        name: 'me',
+        request: {
+          method: 'GET',
+          url: 'https://a.test/me',
+          auth: { type: 'bearer', bearer: [{ key: 'token', value: 'T' }] },
+        },
+      }],
+    }
+    const [req] = parsePostmanCollection(col)
+    expect(req.headers['Authorization']).toBe('Bearer T')
+  })
+
+  it('does not clobber an explicit Authorization header with auth config', () => {
+    const col = {
+      info: { schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [{
+        name: 'me',
+        request: {
+          method: 'GET',
+          url: 'https://a.test/me',
+          header: [{ key: 'Authorization', value: 'Basic abc' }],
+          auth: { type: 'bearer', bearer: [{ key: 'token', value: 'T' }] },
+        },
+      }],
+    }
+    const [req] = parsePostmanCollection(col)
+    expect(req.headers['Authorization']).toBe('Basic abc')
+  })
+
   it('rejects a collection nested deeper than the recursion cap (#73)', () => {
     let item: Record<string, unknown> = { name: 'leaf', request: { method: 'GET', url: 'https://a.test/x' } }
     for (let i = 0; i < 200; i++) item = { name: `f${i}`, item: [item] }

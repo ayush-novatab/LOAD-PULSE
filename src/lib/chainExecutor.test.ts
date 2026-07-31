@@ -41,6 +41,23 @@ describe('runChain', () => {
     expect(vars).toEqual({ t: 'tok' })
   })
 
+  it('injects a variable extracted in step 1 into step 2 headers (#90)', async () => {
+    const calls: Array<{ url: string; init?: RequestInit }> = []
+    mockFetch((url, init) => {
+      calls.push({ url, init })
+      return jsonResponse(calls.length === 1 ? '{"token":"abc"}' : '{}')
+    })
+
+    await runChain([
+      { id: 's1', curl: 'curl https://api.test/login', extractors: [{ varName: 'token', source: 'body', path: 'token' }] },
+      { id: 's2', curl: `curl https://api.test/{{chain.token}}/me -H 'Authorization: Bearer {{chain.token}}'`, extractors: [] },
+    ])
+
+    expect(calls).toHaveLength(2)
+    expect(calls[1].url).toBe('https://api.test/abc/me')
+    expect((calls[1].init?.headers as Record<string, string>)['Authorization']).toBe('Bearer abc')
+  })
+
   it('rejects on an unparseable chain step instead of silently skipping it (#81)', async () => {
     mockFetch(() => jsonResponse('{}'))
     await expect(
