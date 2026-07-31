@@ -35,11 +35,15 @@ interface PMItem {
   item?: PMItem[]
 }
 
-export function flattenItems(items: PMItem[], folder = ''): Array<{ name: string; request: PMRequest; folder: string }> {
+/** Deeper than any real collection — guards a crafted/corrupt file from blowing the stack. */
+const MAX_NEST_DEPTH = 64
+
+export function flattenItems(items: PMItem[], folder = '', depth = 0): Array<{ name: string; request: PMRequest; folder: string }> {
+  if (depth > MAX_NEST_DEPTH) throw new Error('Collection folders nested too deeply')
   const out: Array<{ name: string; request: PMRequest; folder: string }> = []
   for (const item of items) {
     if (item.item) {
-      const sub = flattenItems(item.item, folder ? `${folder}/${item.name ?? ''}` : (item.name ?? ''))
+      const sub = flattenItems(item.item, folder ? `${folder}/${item.name ?? ''}` : (item.name ?? ''), depth + 1)
       out.push(...sub)
     } else if (item.request) {
       out.push({ name: item.name ?? 'Request', request: item.request, folder })

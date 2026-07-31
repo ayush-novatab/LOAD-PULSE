@@ -1,6 +1,28 @@
 import { describe, it, expect } from 'vitest'
-import { requestToCurl } from './postmanParser'
+import { requestToCurl, parsePostmanCollection } from './postmanParser'
 import { parseCurl } from './curlParser'
+
+describe('parsePostmanCollection', () => {
+  it('flattens nested folders', () => {
+    const col = {
+      info: { schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [{ name: 'auth', item: [{ name: 'login', request: { method: 'GET', url: 'https://a.test/login' } }] }],
+    }
+    const reqs = parsePostmanCollection(col)
+    expect(reqs).toHaveLength(1)
+    expect(reqs[0].folder).toBe('auth')
+  })
+
+  it('rejects a collection nested deeper than the recursion cap (#73)', () => {
+    let item: Record<string, unknown> = { name: 'leaf', request: { method: 'GET', url: 'https://a.test/x' } }
+    for (let i = 0; i < 200; i++) item = { name: `f${i}`, item: [item] }
+    const col = {
+      info: { schema: 'https://schema.getpostman.com/json/collection/v2.1.0/collection.json' },
+      item: [item],
+    }
+    expect(() => parsePostmanCollection(col)).toThrow(/nested too deeply/)
+  })
+})
 
 describe('requestToCurl', () => {
   it('emits an already-encoded urlencoded body with -d, not --data-urlencode', () => {

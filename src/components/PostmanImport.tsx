@@ -16,6 +16,7 @@ export default function PostmanImport({ onSelect, onClose }: Props) {
 
   function processJson(text: string) {
     try {
+      if (text.length > 10 * 1024 * 1024) throw new Error('Collection too large (max 10MB)')
       const json = JSON.parse(text)
       const reqs = parsePostmanCollection(json)
       if (reqs.length === 0) throw new Error('No requests found in collection')
