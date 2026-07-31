@@ -1,7 +1,7 @@
 import { getRps, getDurationMs, getConcur, getTimeout } from '../src/lib/loadPatterns.ts'
 import { fireRequest, makeSemaphore } from '../src/lib/fetcher.ts'
 import { resetUniqueVars } from '../src/lib/variableInjector.ts'
-import { percentile } from '../src/lib/percentile.ts'
+import { LatencyStats } from '../src/lib/percentile.ts'
 import type { TestConfig, PatternType, ReportData, FailureGroup, ChartPoint } from '../src/lib/types.ts'
 
 export interface RunSnapshot {
@@ -29,6 +29,7 @@ export async function runTest(
   abortSignal?.addEventListener('abort', () => stopController.abort())
 
   let sent = 0, ok = 0, fail = 0
+  const latStats = new LatencyStats()
   const chartPts: ChartPoint[] = []
   const failures: Record<string, FailureGroup> = {}
   let stopped = false
@@ -51,6 +52,7 @@ export async function runTest(
     sent++
     if (result.ok) ok++
     else fail++
+    latStats.add(result.lat)
     chartPts.push({ t: Date.now() - startTime, lat: result.lat, ok: result.ok })
     if (chartPts.length > 10000) chartPts.shift()
 
@@ -109,13 +111,14 @@ export async function runTest(
   // brief settle window for in-flight requests
   await new Promise(r => setTimeout(r, 300))
 
-  const lats = chartPts.map(p => p.lat)
+  // headline stats stream over every sample — chartPts is capped and only
+  // feeds the charts, so long runs would otherwise report tail-only numbers
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(2)
   const sr = sent ? ((ok / sent) * 100).toFixed(1) : '0.0'
-  const avg = lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) : 0
-  const p95 = percentile(lats, 95)
-  const p99 = percentile(lats, 99)
-  const maxL = lats.length ? Math.max(...lats) : 0
+  const avg = latStats.avg()
+  const p95 = latStats.percentile(95)
+  const p99 = latStats.percentile(99)
+  const maxL = latStats.max()
   const rps = (sent / Math.max(0.1, parseFloat(elapsed))).toFixed(2)
 
   return {

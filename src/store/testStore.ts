@@ -4,7 +4,7 @@ import type { ParsedCurl, ChartPoint, TputPoint, LogEntry, FailureGroup, TestCon
 import { getRps, getDurationMs, getConcur, getTimeout } from '../lib/loadPatterns'
 import { fireRequest, makeSemaphore } from '../lib/fetcher'
 import { resetUniqueVars } from '../lib/variableInjector'
-import { percentile } from '../lib/percentile'
+import { LatencyStats } from '../lib/percentile'
 
 interface TestStats {
   sent: number
@@ -43,6 +43,7 @@ export const useTestStore = create<TestState>((set, get) => {
   let uiH: ReturnType<typeof setInterval> | null = null
   let stopController: AbortController | null = null
   let accum = 0
+  let latStats = new LatencyStats()
   let lastTputSec = -1
   let tputSecCount = 0
   let runPattern: PatternType = 'constant'
@@ -54,14 +55,15 @@ export const useTestStore = create<TestState>((set, get) => {
   }
 
   function buildReport(state: TestState): ReportData {
-    const lats = state.chartPts.map(p => p.lat)
+    // headline stats stream over every sample — chartPts is capped at 2000 and
+    // only feeds the charts, so long runs would otherwise report tail-only numbers
     const { ok, fail, sent } = state.stats
     const elapsed = ((Date.now() - state.startTime) / 1000).toFixed(2)
     const sr = sent ? (ok / sent * 100).toFixed(1) : '0.0'
-    const avg = lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) : 0
-    const p95 = percentile(lats, 95)
-    const p99 = percentile(lats, 99)
-    const maxL = lats.length ? Math.max(...lats) : 0
+    const avg = latStats.avg()
+    const p95 = latStats.percentile(95)
+    const p99 = latStats.percentile(99)
+    const maxL = latStats.max()
     const rps = (sent / Math.max(0.1, parseFloat(elapsed))).toFixed(2)
     const parsed = (state as unknown as { _parsed: ParsedCurl })._parsed
     return {
@@ -102,7 +104,7 @@ export const useTestStore = create<TestState>((set, get) => {
       clearHandles()
       stopController?.abort()
       stopController = new AbortController()
-      accum = 0; lastTputSec = -1; tputSecCount = 0; runPattern = pattern
+      accum = 0; latStats = new LatencyStats(); lastTputSec = -1; tputSecCount = 0; runPattern = pattern
       resetUniqueVars()
 
       const totalMs = getDurationMs(pattern, cfg)
@@ -136,6 +138,7 @@ export const useTestStore = create<TestState>((set, get) => {
           cfg.captureBody, signal,
         )
         sem.release()
+        latStats.add(result.lat)
 
         set(s => {
           const stats = { ...s.stats }

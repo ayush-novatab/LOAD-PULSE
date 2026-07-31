@@ -58,4 +58,24 @@ describe('testStore history save (#55)', () => {
     await vi.advanceTimersByTimeAsync(50)
     expect(addRun).not.toHaveBeenCalled()
   })
+
+  it('reports latency stats over all samples, not the 2000-point chart cap (#88)', async () => {
+    const { fireRequest } = await import('../lib/fetcher')
+    let call = 0
+    vi.mocked(fireRequest).mockImplementation(() => {
+      // the first 500 requests are slow — beyond the tail the chart cap keeps
+      const lat = ++call <= 500 ? 1000 : 10
+      return Promise.resolve({ ok: true, status: 200, lat, msg: 'OK', bodyText: null, reason: 'OK', badgeType: 'ok' } as Awaited<ReturnType<typeof fireRequest>>)
+    })
+
+    const fastCfg = { ...cfg, constRate: 3000 } as typeof cfg
+    useTestStore.getState().startTest(fastCfg, 'constant')
+    await vi.advanceTimersByTimeAsync(1200)
+
+    const report = useTestStore.getState().report!
+    expect(report.meta.total).toBeGreaterThan(2500)
+    // before the streaming stats, these reflected only the last 2000 samples (all lat=10)
+    expect(report.meta.maxLatMs).toBe(1000)
+    expect(report.meta.avgLatMs).toBeGreaterThan(100)
+  })
 })

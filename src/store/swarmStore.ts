@@ -3,7 +3,7 @@ import type { TestConfig, PatternType, TputPoint } from '../lib/types'
 import { hostSwarm, joinSwarm, randomRoomId, type HostHandle, type NodeHandle } from '../lib/swarm/swarmNetwork'
 import { runSwarmSlice, SEQ_BLOCK_WIDTH, type SwarmSampleWindow, type ShareRef } from '../lib/swarm/swarmEngine'
 import { getDurationMs } from '../lib/loadPatterns'
-import { percentile } from '../lib/percentile'
+import { LatencyStats } from '../lib/percentile'
 import type { SwarmMessage, SwarmNodeState } from '../lib/swarm/types'
 
 interface AggStats {
@@ -12,9 +12,11 @@ interface AggStats {
   fail: number
   codes: Record<number, number>
   latencies: number[]
+  /** streams over every sample — `latencies` is capped and display-only (#88) */
+  stats: LatencyStats
 }
 
-const emptyAgg = (): AggStats => ({ sent: 0, ok: 0, fail: 0, codes: {}, latencies: [] })
+const emptyAgg = (): AggStats => ({ sent: 0, ok: 0, fail: 0, codes: {}, latencies: [], stats: new LatencyStats() })
 
 interface SwarmState {
   role: 'idle' | 'host' | 'node'
@@ -69,12 +71,14 @@ function rebalanceHost(get: () => SwarmState): number {
 function mergeWindow(agg: AggStats, w: SwarmSampleWindow): AggStats {
   const codes = { ...agg.codes }
   for (const [k, v] of Object.entries(w.codes)) codes[Number(k)] = (codes[Number(k)] || 0) + v
+  for (const l of w.latencies) agg.stats.add(l)
   return {
     sent: agg.sent + w.sent,
     ok: agg.ok + w.ok,
     fail: agg.fail + w.fail,
     codes,
     latencies: [...agg.latencies, ...w.latencies].slice(-5000),
+    stats: agg.stats,
   }
 }
 
@@ -298,15 +302,14 @@ function handleIncoming(
 }
 
 export function swarmSummary(agg: AggStats) {
-  const avg = agg.latencies.length ? Math.round(agg.latencies.reduce((a, b) => a + b, 0) / agg.latencies.length) : 0
   return {
     sent: agg.sent,
     ok: agg.ok,
     fail: agg.fail,
     successRate: agg.sent ? ((agg.ok / agg.sent) * 100).toFixed(1) : '0.0',
-    avg,
-    p95: percentile(agg.latencies, 95),
-    p99: percentile(agg.latencies, 99),
+    avg: agg.stats.avg(),
+    p95: agg.stats.percentile(95),
+    p99: agg.stats.percentile(99),
   }
 }
 
@@ -354,7 +357,7 @@ export function buildSwarmReport(
       avgLatMs: s.avg,
       p95Ms: s.p95,
       p99Ms: s.p99,
-      maxLatMs: agg.latencies.length ? Math.max(...agg.latencies) : 0,
+      maxLatMs: agg.stats.max(),
       nodeCount,
     },
     nodes: nodeEntries.map(n => ({
