@@ -120,12 +120,19 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
     if (!hostHandle || !hostCfg || !hostPattern) return
     const cfg = hostCfg
     const pattern = hostPattern
-    const connectedRemote = Object.values(get().nodes).filter(n => n.connected).length
+    // host-self is a synthetic entry from a previous run, not a remote node
+    const connectedRemote = Object.values(get().nodes).filter(n => n.connected && n.nodeId !== 'host-self').length
     const share = 1 / (connectedRemote + 1) // +1 for the host itself
     const totalMs = getDurationMs(pattern, cfg)
     const startedAt = Date.now()
 
-    set({ status: 'running', startedAt, totalMs, progressPct: 0, agg: emptyAgg(), tputPts: [] })
+    lastTputSec = -1
+    tputAccum = 0
+    set(s => {
+      const nodes = { ...s.nodes }
+      delete nodes['host-self']
+      return { status: 'running', startedAt, totalMs, progressPct: 0, agg: emptyAgg(), tputPts: [], nodes }
+    })
     // per-connection sends (not broadcast): each node gets its own disjoint
     // seqBase block so {{seq}}/{{phone}}/{{email}} never collide across nodes
     nextSeqBlock = 1
@@ -139,6 +146,9 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
       handleIncoming('host-self', { kind: 'sample', nodeId: 'host-self', windowStartMs: w.windowStartMs, windowEndMs: w.windowEndMs, sent: w.sent, ok: w.ok, fail: w.fail, codes: w.codes, latencies: w.latencies }, set, get)
     }, hostAbort.signal, 0).then(() => {
       set({ status: 'done', progressPct: 100 })
+    }).catch(err => {
+      set({ status: 'error', errorMsg: err instanceof Error ? err.message : 'Swarm run failed' })
+    }).finally(() => {
       hostShareRef = null
       if (uiTimer) { clearInterval(uiTimer); uiTimer = null }
     })
@@ -172,6 +182,9 @@ export const useSwarmStore = create<SwarmState>((set, get) => ({
           }, nodeAbort.signal, msg.seqBase).then(() => {
             // if we were kicked (status already 'error'), don't flip back to 'done'
             set(s => (s.status === 'error' ? {} : { status: 'done', progressPct: 100 }))
+          }).catch(err => {
+            set({ status: 'error', errorMsg: err instanceof Error ? err.message : 'Swarm run failed' })
+          }).finally(() => {
             nodeShareRef = null
           })
         } else if (msg.kind === 'rebalance') {
