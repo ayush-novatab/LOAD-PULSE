@@ -20,6 +20,9 @@ const ICE_SERVERS: RTCIceServer[] = [
 
 const PEER_OPTIONS: PeerOptions = { config: { iceServers: ICE_SERVERS } }
 
+/** How long to wait for the broker / host connection before giving up — a stalled network otherwise leaves the user on 'waiting' forever. */
+const CONNECT_TIMEOUT_MS = 15_000
+
 export function roomIdToPeerId(roomId: string): string {
   return `${ROOM_PREFIX}${roomId.trim().toLowerCase()}`
 }
@@ -46,13 +49,22 @@ export function hostSwarm(
   const peer = new Peer(roomIdToPeerId(roomId), PEER_OPTIONS)
   const connections = new Map<string, DataConnection>()
 
+  const watchdog = setTimeout(() => {
+    if (!peer.open && !peer.destroyed) onError(new Error('Could not reach the swarm broker (timed out)'))
+  }, CONNECT_TIMEOUT_MS)
+
+  peer.on('open', () => clearTimeout(watchdog))
   peer.on('error', err => onError(err as unknown as Error))
 
   peer.on('connection', conn => {
     connections.set(conn.peer, conn)
+    // a connection can die via 'error' without a subsequent 'close' (and vice
+    // versa) — treat either as the node leaving, exactly once
+    const drop = () => { if (connections.delete(conn.peer)) onNodeLeft(conn.peer) }
     conn.on('open', () => onNodeJoined(conn.peer))
     conn.on('data', data => onMessage(conn.peer, data as SwarmMessage))
-    conn.on('close', () => { connections.delete(conn.peer); onNodeLeft(conn.peer) })
+    conn.on('close', drop)
+    conn.on('error', drop)
   })
 
   return {
@@ -64,6 +76,7 @@ export function hostSwarm(
       }
     },
     close() {
+      clearTimeout(watchdog)
       connections.forEach(c => c.close())
       peer.destroy()
     },
@@ -90,14 +103,20 @@ export function joinSwarm(
     peer,
     conn: null,
     send(msg) { if (handle.conn?.open) handle.conn.send(msg) },
-    close() { handle.conn?.close(); peer.destroy() },
+    close() { clearTimeout(watchdog); handle.conn?.close(); peer.destroy() },
   }
+
+  // covers both a stalled broker (peer never opens) and an unreachable host
+  // (data connection never opens)
+  const watchdog = setTimeout(() => {
+    if (!handle.conn?.open && !peer.destroyed) onError(new Error('Connection timed out — check the room code and your network'))
+  }, CONNECT_TIMEOUT_MS)
 
   peer.on('error', err => onError(err as unknown as Error))
   peer.on('open', () => {
     const conn = peer.connect(roomIdToPeerId(roomId), { reliable: true })
     handle.conn = conn
-    conn.on('open', onOpen)
+    conn.on('open', () => { clearTimeout(watchdog); onOpen() })
     conn.on('data', data => onMessage(data as SwarmMessage))
     conn.on('close', onClose)
     conn.on('error', err => onError(err as unknown as Error))
